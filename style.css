@@ -158,6 +158,32 @@ textarea:focus {
     border-color: rgba(88, 166, 255, 0.4);
 }
 
+/* Scrollbar styling for WebKit */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--surface);
+    border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: linear-gradient(120deg, #3c8ce7, #00eaff);
+    border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(120deg, #2a6fd1, #00c9d6);
+}
+
+/* Scrollbars for Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3c8ce7 var(--surface);
+}
+
 button {
     grid-column: 1 / -1;
     border: none;
@@ -229,7 +255,8 @@ button:hover {
 .table-wrapper {
     border: 1px solid var(--border);
     border-radius: 14px;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 table {
@@ -244,6 +271,7 @@ td {
     padding: 0.9rem 1rem;
     text-align: left;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: top;
 }
 
 thead {
@@ -310,15 +338,21 @@ tbody tr:hover {
 }
 
 .notes {
+    display: block;
     font-size: 0.9rem;
     color: var(--text);
     white-space: pre-line;
+    word-break: break-word;
+    max-height: 5.5rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
 }
 
 .actions-cell {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    min-width: 120px;
 }
 
 .table-button {
