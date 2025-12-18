@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Gestão de Compra e Venda de Veículos</title>
+        <meta name="description" content="Modelo base para controlar compra, venda e lucro de veículos.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="layout">
+            <nav class="top-nav">
+                <a class="nav-link active" href="index.html">Registrar operações</a>
+                <a class="nav-link" href="historico.html">Histórico e filtros</a>
+            </nav>
+
+            <header class="page-header">
+                <p class="badge">Painel Operacional</p>
+                <h1>Controle de Compra e Revenda</h1>
+                <p class="lead">
+                    Utilize os formulários como se fossem abas de planilha: registre os dados e acompanhe o lucro projetado
+                    automaticamente no resumo e na tabela de operações.
+                </p>
+            </header>
+
+            <section class="form-wrapper">
+                <article class="card">
+                    <div class="card-header">
+                        <h2>Registro de Compra</h2>
+                        <p>Dados do veículo adquirido para estoque.</p>
+                    </div>
+                    <form id="purchase-form" class="form-grid">
+                        <label>
+                            Data da Compra
+                            <input type="date" name="data" required>
+                        </label>
+                        <label>
+                            Modelo / Versão
+                            <input type="text" name="modelo" placeholder="Ex.: Toro Freedom 2.0" required>
+                        </label>
+                        <label>
+                            Ano
+                            <input type="number" name="ano" min="1980" max="2100" placeholder="2020">
+                        </label>
+                        <label>
+                            Placa
+                            <input type="text" name="placa" placeholder="ABC1D23" maxlength="7" required>
+                        </label>
+                        <label>
+                            Origem / Fornecedor
+                            <input type="text" name="parceiro" placeholder="Loja, leilão, particular">
+                        </label>
+                        <label>
+                            Valor da Compra (R$)
+                            <input type="number" name="valorCompra" min="0" step="0.01" required>
+                        </label>
+                        <label>
+                            Custos Extras (R$)
+                            <input type="number" name="custosExtras" min="0" step="0.01" placeholder="IPVA, transferência, etc.">
+                        </label>
+                        <label class="wide">
+                            Observações
+                            <textarea name="observacoes" rows="2" placeholder="Documentação pendente, revisões previstas..."></textarea>
+                        </label>
+                        <button type="submit">Adicionar compra</button>
+                    </form>
+                </article>
+
+                <article class="card">
+                    <div class="card-header">
+                        <h2>Registro de Venda</h2>
+                        <p>Detalhes da revenda e cálculo do lucro.</p>
+                    </div>
+                    <form id="sale-form" class="form-grid">
+                        <label>
+                            Data da Venda
+                            <input type="date" name="data" required>
+                        </label>
+                        <label>
+                            Comprador
+                            <input type="text" name="parceiro" placeholder="Nome do cliente" required>
+                        </label>
+                        <label>
+                            Contato
+                            <input type="text" name="contato" placeholder="Telefone ou e-mail">
+                        </label>
+                        <label>
+                            Modelo / Versão
+                            <input type="text" name="modelo" placeholder="Mesmo modelo cadastrado na compra" required>
+                        </label>
+                        <label>
+                            Placa
+                            <input type="text" name="placa" placeholder="ABC1D23" maxlength="7" required>
+                        </label>
+                        <label>
+                            Valor da Compra (R$)
+                            <input type="number" name="valorCompra" min="0" step="0.01" placeholder="Quanto foi pago anteriormente" required>
+                        </label>
+                        <label>
+                            Custos Extras (R$)
+                            <input type="number" name="custosExtras" min="0" step="0.01" placeholder="Comissão, garantia, etc.">
+                        </label>
+                        <label>
+                            Valor da Venda (R$)
+                            <input type="number" name="valorVenda" min="0" step="0.01" required>
+                        </label>
+                        <label class="wide">
+                            Observações
+                            <textarea name="observacoes" rows="2" placeholder="Condição negociada, prazo para pagamento..."></textarea>
+                        </label>
+                        <button type="submit">Adicionar venda</button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="summary">
+                <article class="summary-card">
+                    <p>Investimento em estoque</p>
+                    <strong data-summary="invested">R$ 0,00</strong>
+                </article>
+                <article class="summary-card">
+                    <p>Valor vendido</p>
+                    <strong data-summary="sold">R$ 0,00</strong>
+                </article>
+                <article class="summary-card">
+                    <p>Lucro apurado</p>
+                    <strong data-summary="profit">R$ 0,00</strong>
+                </article>
+                <article class="summary-card">
+                    <p>Operações registradas</p>
+                    <strong data-summary="count">0</strong>
+                </article>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Histórico de Operações</h2>
+                    <p>Visão consolidada no formato de planilha.</p>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Modelo</th>
+                                <th>Placa</th>
+                                <th>Contraparte</th>
+                                <th>Valor Compra</th>
+                                <th>Valor Venda</th>
+                                <th>Lucro</th>
+                                <th>Observações</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-body">
+                            <tr class="placeholder">
+                                <td colspan="10">Nenhuma operação cadastrada ainda.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <script src="app.js" defer></script>
+    </body>
+</html>

@@ -1,0 +1,350 @@
+:root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-alt: #1f2633;
+    --primary: #58a6ff;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #e6edf3;
+    --muted: #94a3b8;
+    --success: #2fbf71;
+    font-size: 16px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+    background: radial-gradient(circle at top, #182335, #0b0f17 55%);
+    min-height: 100vh;
+}
+
+.layout {
+    width: min(1400px, 100%);
+    margin: 0 auto;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.top-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.02);
+    align-self: center;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: var(--muted);
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+}
+
+.nav-link.active {
+    color: var(--bg);
+    background: linear-gradient(120deg, #3c8ce7, #00eaff);
+}
+
+.page-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+}
+
+.badge {
+    align-self: center;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    color: var(--primary);
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+}
+
+.lead {
+    color: var(--muted);
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.card-header h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.4rem;
+}
+
+.card-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.form-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.form-grid label {
+    font-size: 0.9rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.filter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.form-grid .wide {
+    grid-column: 1 / -1;
+}
+
+input,
+textarea {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem;
+    color: var(--text);
+    font-size: 1rem;
+    font-family: inherit;
+    width: 100%;
+}
+
+input:focus,
+textarea:focus {
+    outline: 2px solid rgba(88, 166, 255, 0.5);
+    border-color: rgba(88, 166, 255, 0.4);
+}
+
+button {
+    grid-column: 1 / -1;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #3c8ce7, #00eaff);
+    color: #0d1117;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(0, 234, 255, 0.2);
+}
+
+.helper-text {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.card > .helper-text {
+    margin-top: 0.5rem;
+}
+
+.results-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    border-radius: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.summary-card strong {
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.table-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+    table-layout: auto;
+}
+
+th,
+td {
+    padding: 0.9rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+thead {
+    background: var(--surface-alt);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+tbody tr:hover {
+    background: rgba(88, 166, 255, 0.05);
+}
+
+.placeholder td {
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.tag-purchase {
+    background: rgba(255, 145, 0, 0.15);
+    color: #ffb347;
+    border: 1px solid rgba(255, 145, 0, 0.35);
+}
+
+.tag-sale {
+    background: rgba(47, 191, 113, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(47, 191, 113, 0.35);
+}
+
+.contact,
+.muted-text {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.profit {
+    font-weight: 600;
+}
+
+.profit-positive {
+    color: var(--success);
+}
+
+.profit-negative {
+    color: #ff6b6b;
+}
+
+.notes {
+    font-size: 0.9rem;
+    color: var(--text);
+    white-space: pre-line;
+}
+
+.actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.table-button {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.table-button:hover {
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.5);
+}
+
+@media (max-width: 768px) {
+    table {
+        min-width: auto;
+        font-size: 0.9rem;
+    }
+
+    th,
+    td {
+        padding: 0.75rem;
+    }
+}
