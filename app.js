@@ -129,7 +129,7 @@ const renderTransactions = () => {
 
     if (!state.transactions.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="10">Nenhuma operação cadastrada ainda.</td></tr>';
+            '<tr class="placeholder"><td colspan="12">Nenhuma operação cadastrada ainda.</td></tr>';
         return;
     }
 
@@ -140,6 +140,8 @@ const renderTransactions = () => {
         }
 
         const lucro = calculateProfit(record);
+        const totalInvestido =
+            (record.valorCompra || 0) + (record.custosExtras || 0);
         const typeClass = record.tipo === "Venda" ? "tag-sale" : "tag-purchase";
         const profitClass =
             typeof lucro === "number"
@@ -164,6 +166,8 @@ const renderTransactions = () => {
                 }
             </td>
             <td>${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}</td>
+            <td>${record.custosExtras ? formatCurrency(record.custosExtras) : "—"}</td>
+            <td>${totalInvestido ? formatCurrency(totalInvestido) : "—"}</td>
             <td>${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}</td>
             <td>
                 <span class="profit ${profitClass}">
