@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Cadastro de Clientes - Venda de Veículos</title>
+        <meta name="description" content="Gerencie seus clientes para operações de compra e venda de veículos.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="layout clients-page">
+            <nav class="top-nav">
+                <a class="nav-link" href="index.html">Registrar operações</a>
+                <a class="nav-link" href="historico.html">Histórico e filtros</a>
+                <a class="nav-link active" href="clientes.html">Clientes</a>
+            </nav>
+
+            <header class="page-header">
+                <p class="badge">Base de contatos</p>
+                <h1>Cadastro e Consulta de Clientes</h1>
+                <p class="lead">
+                    Mantenha informações essenciais de compradores e fornecedores organizadas em um só lugar. Cadastre novos
+                    clientes e consulte rapidamente endereços, documentos e contatos.
+                </p>
+            </header>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Novo cliente</h2>
+                    <p>Preencha os dados abaixo para adicionar um contato à sua base.</p>
+                </div>
+                <form id="client-form" class="form-grid">
+                    <label>
+                        Nome completo
+                        <input type="text" name="nome" placeholder="Nome e sobrenome" required>
+                    </label>
+                    <label>
+                        CPF
+                        <input type="text" name="cpf" placeholder="000.000.000-00" required>
+                    </label>
+                    <label>
+                        RG
+                        <input type="text" name="rg" placeholder="Documento de identidade">
+                    </label>
+                    <label>
+                        CNH
+                        <input type="text" name="cnh" placeholder="Número da CNH">
+                    </label>
+                    <label>
+                        Endereço
+                        <input type="text" name="endereco" placeholder="Rua, número, bairro, cidade">
+                    </label>
+                    <label>
+                        Contato
+                        <input type="text" name="contato" placeholder="Telefone ou WhatsApp" required>
+                    </label>
+                    <label>
+                        E-mail
+                        <input type="email" name="email" placeholder="cliente@email.com">
+                    </label>
+                    <button type="submit" name="BtnClient">Salvar cliente</button>
+                </form>
+            </section>
+
+            <section class="card card-history">
+                <div class="card-header">
+                    <h2>Clientes cadastrados</h2>
+                    <p>Utilize a tabela abaixo para consultar e remover cadastros quando necessário.</p>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>RG</th>
+                                <th>CNH</th>
+                                <th>Endereço</th>
+                                <th>Contato</th>
+                                <th>E-mail</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table">
+                            <tr class="placeholder">
+                                <td colspan="8">Nenhum cliente cadastrado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <script src="clientes.js" defer></script>
+    </body>
+</html>

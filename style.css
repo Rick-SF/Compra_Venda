@@ -25,9 +25,9 @@ body {
 }
 
 .layout {
-    width: min(1600px, 100%);
+    width: 100%;
     margin: 0 auto;
-    padding: clamp(1.5rem, 3vw, 2.5rem);
+    padding: clamp(1.25rem, 2vw, 2rem);
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -101,6 +101,68 @@ body {
     gap: 1.25rem;
 }
 
+.clients-page .card {
+    width: min(1000px, 100%);
+    margin: 0 auto;
+}
+
+.clients-page .card.card-history {
+    width: min(1100px, 100%);
+}
+
+.clients-page .card.card-history .table-wrapper {
+    overflow-x: hidden;
+}
+
+.clients-page .card.card-history table {
+    min-width: auto;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.clients-page .card.card-history th,
+.clients-page .card.card-history td {
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.clients-page .card.card-history th:last-child,
+.clients-page .card.card-history td.actions-cell {
+    width: 140px;
+    text-align: center;
+}
+
+.clients-page .card.card-history td.actions-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.clients-page .card.card-history .table-button {
+    width: auto;
+    padding: 0.35rem 1rem;
+    white-space: nowrap;
+}
+
+.clients-page button {
+    width: 350px;
+    margin-left: 300px;
+    margin-top: 18px;
+}
+
+.clients-page .card.card-history td.actions-cell {
+    width: 120px;
+    text-align: center;
+}
+
+.clients-page .card.card-history .table-button {
+    display: inline-flex;
+    justify-content: center;
+    padding: 0.4rem 1rem;
+    margin-right: 275px;
+}
+
 .card-header h2 {
     margin: 0 0 0.25rem 0;
     font-size: 1.4rem;
@@ -156,6 +218,16 @@ input:focus,
 textarea:focus {
     outline: 2px solid rgba(88, 166, 255, 0.5);
     border-color: rgba(88, 166, 255, 0.4);
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* Scrollbar styling for WebKit */
@@ -222,6 +294,32 @@ button:hover {
     font-size: 0.9rem;
 }
 
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.clear-button {
+    border-radius: 999px;
+    padding: 0.5rem 1.25rem;
+    color: var(--bg);
+    background: linear-gradient(120deg, #ff6b6b, #ffd166);
+    border: none;
+    font-weight: 600;
+}
+
+.card-history {
+    width: 100%;
+}
+
+.card-history .table-wrapper {
+    width: 100%;
+}
+
+.card-history table {
+    min-width: 2000px;
+}
+
 .summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -255,13 +353,14 @@ button:hover {
 .table-wrapper {
     border: 1px solid var(--border);
     border-radius: 14px;
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px;
+    min-width: 1000px;
     table-layout: auto;
 }
 

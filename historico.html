@@ -13,6 +13,7 @@
             <nav class="top-nav">
                 <a class="nav-link" href="index.html">Registrar operações</a>
                 <a class="nav-link active" href="historico.html">Histórico e filtros</a>
+                <a class="nav-link" href="clientes.html">Clientes</a>
             </nav>
 
             <header class="page-header">
@@ -24,7 +25,7 @@
                 </p>
             </header>
 
-            <section class="card">
+            <section class="card card-history">
                 <div class="card-header">
                     <h2>Filtros rápidos</h2>
                     <p>Combine os campos abaixo para encontrar exatamente o veículo ou cliente desejado.</p>
@@ -42,7 +43,20 @@
                         Comprador / fornecedor
                         <input type="text" name="comprador" placeholder="Nome parcial ou completo">
                     </label>
+                    <label>
+                        Data inicial
+                        <input type="date" name="dataInicio">
+                    </label>
+                    <label>
+                        Data final
+                        <input type="date" name="dataFim">
+                    </label>
                 </form>
+                <div class="filter-actions">
+                    <button type="button" class="table-button clear-button" id="clear-filters">
+                        Limpar filtros
+                    </button>
+                </div>
                 <p class="helper-text">Os filtros são aplicados automaticamente. Deixe os campos vazios para ver todo o histórico.</p>
             </section>
 
@@ -80,12 +94,22 @@
                             <tr>
                                 <th>Data</th>
                                 <th>Tipo</th>
+                                <th>Veículo</th>
+                                <th>Marca</th>
                                 <th>Modelo</th>
+                                <th>Cor</th>
+                                <th>Ano Fab.</th>
+                                <th>Ano Mod.</th>
+                                <th>Cidade</th>
+                                <th>UF</th>
                                 <th>Placa</th>
                                 <th>Contraparte</th>
+                                <th>Chassi</th>
+                                <th>Renavam</th>
+                                <th>Código CRVe</th>
+                                <th>Código CLAe</th>
+                                <th>Código ATPVe</th>
                                 <th>Valor Compra</th>
-                                <th>Custos Extras</th>
-                                <th>Total Investido</th>
                                 <th>Valor Venda</th>
                                 <th>Lucro</th>
                                 <th>Observações</th>
@@ -94,7 +118,7 @@
                         </thead>
                         <tbody id="history-body">
                             <tr class="placeholder">
-                                <td colspan="12">Nenhum registro disponível.</td>
+                                <td colspan="22">Nenhum registro disponível.</td>
                             </tr>
                         </tbody>
                     </table>

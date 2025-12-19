@@ -56,10 +56,60 @@ const persistTransactions = () => {
     }
 };
 
+const vehicleFields = [
+    "veiculo",
+    "marca",
+    "cor",
+    "anoFabricacao",
+    "anoModelo",
+    "cidade",
+    "uf",
+    "chassi",
+    "renavan",
+    "codigoCRVe",
+    "codigoCLAe",
+    "codigoATPVe",
+];
+
+const ensureVehicleFields = (record = {}) => {
+    const normalized = { ...record };
+    vehicleFields.forEach((field) => {
+        if (
+            typeof normalized[field] === "undefined" ||
+            normalized[field] === null
+        ) {
+            normalized[field] = "";
+        }
+    });
+    return normalized;
+};
+
+const normalizeISODate = (value) => {
+    if (!value) return "";
+    if (value.includes("/")) {
+        const [day, month, year] = value.split("/");
+        if (!year || !month || !day) return "";
+        return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(
+            2,
+            "0"
+        )}`;
+    }
+    const [year, month, day] = value.split("-");
+    if (!year || !month || !day) return "";
+    return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(
+        2,
+        "0"
+    )}`;
+};
+
 const toNumber = (value) => Number(value) || 0;
 const formatCurrency = (value) => currency.format(value || 0);
-const formatDate = (isoDate) =>
-    isoDate ? new Intl.DateTimeFormat("pt-BR").format(new Date(isoDate)) : "—";
+const formatDate = (value) => {
+    const isoDate = normalizeISODate(value);
+    if (!isoDate) return "—";
+    const [year, month, day] = isoDate.split("-");
+    return `${day}/${month}/${year}`;
+};
 
 const calculateProfit = (record) => {
     if (record.tipo !== "Venda") return null;
@@ -88,17 +138,28 @@ const handlePurchaseSubmit = (event) => {
         id: createId(),
         tipo: "Compra",
         data: data.get("data"),
+        veiculo: data.get("veiculo")?.trim(),
+        marca: data.get("marca")?.trim(),
         modelo: data.get("modelo")?.trim(),
+        cor: data.get("cor")?.trim(),
+        anoFabricacao: data.get("anoFabricacao")?.trim(),
+        anoModelo: data.get("anoModelo")?.trim(),
         placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+        cidade: data.get("cidade")?.trim(),
+        uf: data.get("uf")?.trim().toUpperCase() || "",
         parceiro: data.get("parceiro")?.trim(),
-        ano: data.get("ano")?.trim(),
+        chassi: data.get("chassi")?.trim(),
+        renavan: data.get("renavan")?.trim(),
+        codigoCRVe: data.get("codigoCRVe")?.trim(),
+        codigoCLAe: data.get("codigoCLAe")?.trim(),
+        codigoATPVe: data.get("codigoATPVe")?.trim(),
         contato: "",
         valorCompra: toNumber(data.get("valorCompra")),
         valorVenda: 0,
         custosExtras: toNumber(data.get("custosExtras")),
         observacoes: data.get("observacoes")?.trim(),
     };
-    addTransaction(record);
+    addTransaction(ensureVehicleFields(record));
     event.currentTarget.reset();
 };
 
@@ -109,16 +170,28 @@ const handleSaleSubmit = (event) => {
         id: createId(),
         tipo: "Venda",
         data: data.get("data"),
+        veiculo: "",
+        marca: "",
         modelo: data.get("modelo")?.trim(),
+        cor: "",
+        anoFabricacao: "",
+        anoModelo: "",
         placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+        cidade: "",
+        uf: "",
         parceiro: data.get("parceiro")?.trim(),
         contato: data.get("contato")?.trim(),
+        chassi: "",
+        renavan: "",
+        codigoCRVe: "",
+        codigoCLAe: "",
+        codigoATPVe: "",
         valorCompra: toNumber(data.get("valorCompra")),
         valorVenda: toNumber(data.get("valorVenda")),
         custosExtras: toNumber(data.get("custosExtras")),
         observacoes: data.get("observacoes")?.trim(),
     };
-    addTransaction(record);
+    addTransaction(ensureVehicleFields(record));
     event.currentTarget.reset();
 };
 
@@ -129,7 +202,7 @@ const renderTransactions = () => {
 
     if (!state.transactions.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="12">Nenhuma operação cadastrada ainda.</td></tr>';
+            '<tr class="placeholder"><td colspan="22">Nenhuma operação cadastrada ainda.</td></tr>';
         return;
     }
 
@@ -140,8 +213,6 @@ const renderTransactions = () => {
         }
 
         const lucro = calculateProfit(record);
-        const totalInvestido =
-            (record.valorCompra || 0) + (record.custosExtras || 0);
         const typeClass = record.tipo === "Venda" ? "tag-sale" : "tag-purchase";
         const profitClass =
             typeof lucro === "number"
@@ -153,9 +224,14 @@ const renderTransactions = () => {
         tr.innerHTML = `
             <td>${formatDate(record.data)}</td>
             <td><span class="tag ${typeClass}">${record.tipo}</span></td>
-            <td>${record.modelo || "—"} ${
-            record.ano ? `<span class="muted-text">${record.ano}</span>` : ""
-        }</td>
+            <td>${record.veiculo || "—"}</td>
+            <td>${record.marca || "—"}</td>
+            <td>${record.modelo || "—"}</td>
+            <td>${record.cor || "—"}</td>
+            <td>${record.anoFabricacao || "—"}</td>
+            <td>${record.anoModelo || "—"}</td>
+            <td>${record.cidade || "—"}</td>
+            <td>${record.uf || "—"}</td>
             <td>${record.placa || "—"}</td>
             <td>
                 ${record.parceiro || "—"}
@@ -165,9 +241,12 @@ const renderTransactions = () => {
                         : ""
                 }
             </td>
+            <td>${record.chassi || "—"}</td>
+            <td>${record.renavan || "—"}</td>
+            <td>${record.codigoCRVe || "—"}</td>
+            <td>${record.codigoCLAe || "—"}</td>
+            <td>${record.codigoATPVe || "—"}</td>
             <td>${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}</td>
-            <td>${record.custosExtras ? formatCurrency(record.custosExtras) : "—"}</td>
-            <td>${totalInvestido ? formatCurrency(totalInvestido) : "—"}</td>
             <td>${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}</td>
             <td>
                 <span class="profit ${profitClass}">
@@ -196,10 +275,10 @@ const updateSummary = () => {
     const totals = state.transactions.reduce(
         (acc, record) => {
             if (record.tipo === "Compra") {
-                acc.invested += record.valorCompra + record.custosExtras;
+                acc.invested += record.valorCompra || 0;
             }
             if (record.tipo === "Venda") {
-                acc.sold += record.valorVenda;
+                acc.sold += record.valorVenda || 0;
                 acc.profit += calculateProfit(record) || 0;
             }
             return acc;
@@ -218,9 +297,10 @@ const updateSummary = () => {
 };
 
 const init = () => {
-    state.transactions = loadTransactions().map((record) =>
-        record.id ? record : { ...record, id: createId() }
-    );
+    state.transactions = loadTransactions().map((entry) => {
+        const normalized = entry.id ? entry : { ...entry, id: createId() };
+        return ensureVehicleFields(normalized);
+    });
     if (state.transactions.length) {
         persistTransactions();
     }

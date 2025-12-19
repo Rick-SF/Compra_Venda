@@ -13,6 +13,7 @@
             <nav class="top-nav">
                 <a class="nav-link active" href="index.html">Registrar operações</a>
                 <a class="nav-link" href="historico.html">Histórico e filtros</a>
+                <a class="nav-link" href="clientes.html">Clientes</a>
             </nav>
 
             <header class="page-header">
@@ -36,20 +37,64 @@
                             <input type="date" name="data" required>
                         </label>
                         <label>
-                            Modelo / Versão
+                            Veículo
+                            <input type="text" name="veiculo" placeholder="Ex.: Carro, Moto" required>
+                        </label>
+                        <label>
+                            Marca
+                            <input type="text" name="marca" placeholder="Ex.: Honda, Fiat" required>
+                        </label>
+                        <label>
+                            Modelo
                             <input type="text" name="modelo" placeholder="Ex.: Toro Freedom 2.0" required>
                         </label>
                         <label>
-                            Ano
-                            <input type="number" name="ano" min="1980" max="2100" placeholder="2020">
+                            Cor
+                            <input type="text" name="cor" placeholder="Ex.: Preto perolizado">
+                        </label>
+                        <label>
+                            Ano de Fabricação
+                            <input type="number" name="anoFabricacao" min="1980" max="2100" placeholder="2020">
+                        </label>
+                        <label>
+                            Ano do Modelo
+                            <input type="number" name="anoModelo" min="1980" max="2100" placeholder="2021">
                         </label>
                         <label>
                             Placa
                             <input type="text" name="placa" placeholder="ABC1D23" maxlength="7" required>
                         </label>
                         <label>
+                            Cidade
+                            <input type="text" name="cidade" placeholder="Ex.: São Paulo">
+                        </label>
+                        <label>
+                            UF
+                            <input type="text" name="uf" placeholder="SP" maxlength="2">
+                        </label>
+                        <label>
                             Origem / Fornecedor
                             <input type="text" name="parceiro" placeholder="Loja, leilão, particular">
+                        </label>
+                        <label>
+                            Chassi
+                            <input type="text" name="chassi" placeholder="Número completo sem espaços">
+                        </label>
+                        <label>
+                            Renavam
+                            <input type="text" name="renavan" placeholder="Número do Renavam">
+                        </label>
+                        <label>
+                            Código CRVe
+                            <input type="text" name="codigoCRVe" placeholder="CRVe">
+                        </label>
+                        <label>
+                            Código CLAe
+                            <input type="text" name="codigoCLAe" placeholder="CLAe">
+                        </label>
+                        <label>
+                            Código ATPVe
+                            <input type="text" name="codigoATPVe" placeholder="ATPVe">
                         </label>
                         <label>
                             Valor da Compra (R$)
@@ -133,7 +178,7 @@
                 </article>
             </section>
 
-            <section class="card">
+            <section class="card card-history">
                 <div class="card-header">
                     <h2>Histórico de Operações</h2>
                     <p>Visão consolidada no formato de planilha.</p>
@@ -144,12 +189,22 @@
                             <tr>
                                 <th>Data</th>
                                 <th>Tipo</th>
+                                <th>Veículo</th>
+                                <th>Marca</th>
                                 <th>Modelo</th>
+                                <th>Cor</th>
+                                <th>Ano Fab.</th>
+                                <th>Ano Mod.</th>
+                                <th>Cidade</th>
+                                <th>UF</th>
                                 <th>Placa</th>
                                 <th>Contraparte</th>
+                                <th>Chassi</th>
+                                <th>Renavam</th>
+                                <th>Código CRVe</th>
+                                <th>Código CLAe</th>
+                                <th>Código ATPVe</th>
                                 <th>Valor Compra</th>
-                                <th>Custos Extras</th>
-                                <th>Total Investido</th>
                                 <th>Valor Venda</th>
                                 <th>Lucro</th>
                                 <th>Observações</th>
@@ -158,7 +213,7 @@
                         </thead>
                         <tbody id="transactions-body">
                             <tr class="placeholder">
-                                <td colspan="12">Nenhuma operação cadastrada ainda.</td>
+                                <td colspan="22">Nenhuma operação cadastrada ainda.</td>
                             </tr>
                         </tbody>
                     </table>

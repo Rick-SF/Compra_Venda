@@ -11,6 +11,8 @@ const state = {
         modelo: "",
         placa: "",
         comprador: "",
+        dataInicio: "",
+        dataFim: "",
     },
 };
 
@@ -24,6 +26,7 @@ const elements = {
         count: document.querySelector("[data-summary='count']"),
     },
     resultText: document.querySelector("[data-results-count]"),
+    clearButton: document.getElementById("clear-filters"),
 };
 
 const getStorage = () => {
@@ -62,8 +65,54 @@ const persistTransactions = () => {
 };
 
 const formatCurrency = (value) => currency.format(value || 0);
-const formatDate = (isoDate) =>
-    isoDate ? new Intl.DateTimeFormat("pt-BR").format(new Date(isoDate)) : "—";
+const normalizeText = (value) => value?.toString().trim().toLowerCase() || "";
+const normalizePlate = (value) =>
+    value?.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
+const vehicleFields = [
+    "veiculo",
+    "marca",
+    "cor",
+    "anoFabricacao",
+    "anoModelo",
+    "cidade",
+    "uf",
+    "chassi",
+    "renavan",
+    "codigoCRVe",
+    "codigoCLAe",
+    "codigoATPVe",
+];
+const ensureVehicleFields = (record = {}) => {
+    const normalized = { ...record };
+    vehicleFields.forEach((field) => {
+        if (
+            typeof normalized[field] === "undefined" ||
+            normalized[field] === null
+        ) {
+            normalized[field] = "";
+        }
+    });
+    return normalized;
+};
+
+const normalizeISODate = (value) => {
+    if (!value) return "";
+    if (value.includes("/")) {
+        const [day, month, year] = value.split("/");
+        if (!year || !month || !day) return "";
+        return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    const [year, month, day] = value.split("-");
+    if (!year || !month || !day) return "";
+    return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+};
+
+const formatDate = (value) => {
+    const isoDate = normalizeISODate(value);
+    if (!isoDate) return "—";
+    const [year, month, day] = isoDate.split("-");
+    return `${day}/${month}/${year}`;
+};
 
 const calculateProfit = (record) => {
     if (record.tipo !== "Venda") return null;
@@ -71,12 +120,11 @@ const calculateProfit = (record) => {
     return record.valorVenda - cost;
 };
 
-const normalizeText = (value) => value?.toString().trim().toLowerCase() || "";
-const normalizePlate = (value) =>
-    value?.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
-
 const applyFilters = () => {
-    const { modelo, placa, comprador } = state.filters;
+    const { modelo, placa, comprador, dataInicio, dataFim } = state.filters;
+    const startValue = normalizeISODate(dataInicio);
+    const endValue = normalizeISODate(dataFim);
+
     return state.transactions.filter((record) => {
         const matchModel = modelo
             ? (record.modelo || "").toLowerCase().includes(modelo)
@@ -90,7 +138,13 @@ const applyFilters = () => {
         const matchBuyer = comprador
             ? (record.parceiro || "").toLowerCase().includes(comprador)
             : true;
-        return matchModel && matchPlate && matchBuyer;
+        const recordDateValue = normalizeISODate(record.data);
+        if ((startValue || endValue) && !recordDateValue) {
+            return false;
+        }
+        const matchStart = startValue ? recordDateValue >= startValue : true;
+        const matchEnd = endValue ? recordDateValue <= endValue : true;
+        return matchModel && matchPlate && matchBuyer && matchStart && matchEnd;
     });
 };
 
@@ -101,7 +155,7 @@ const renderTable = (records) => {
 
     if (!records.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="12">Nenhuma operação encontrada para o filtro informado.</td></tr>';
+            '<tr class="placeholder"><td colspan="22">Nenhuma operação encontrada para o filtro informado.</td></tr>';
         return;
     }
 
@@ -111,8 +165,6 @@ const renderTable = (records) => {
             tr.title = record.observacoes;
         }
         const lucro = calculateProfit(record);
-        const totalInvestido =
-            (record.valorCompra || 0) + (record.custosExtras || 0);
         const typeClass = record.tipo === "Venda" ? "tag-sale" : "tag-purchase";
         const profitClass =
             typeof lucro === "number"
@@ -124,7 +176,14 @@ const renderTable = (records) => {
         tr.innerHTML = `
             <td>${formatDate(record.data)}</td>
             <td><span class="tag ${typeClass}">${record.tipo}</span></td>
+            <td>${record.veiculo || "—"}</td>
+            <td>${record.marca || "—"}</td>
             <td>${record.modelo || "—"}</td>
+            <td>${record.cor || "—"}</td>
+            <td>${record.anoFabricacao || "—"}</td>
+            <td>${record.anoModelo || "—"}</td>
+            <td>${record.cidade || "—"}</td>
+            <td>${record.uf || "—"}</td>
             <td>${record.placa || "—"}</td>
             <td>
                 ${record.parceiro || "—"}
@@ -134,9 +193,12 @@ const renderTable = (records) => {
                         : ""
                 }
             </td>
+            <td>${record.chassi || "—"}</td>
+            <td>${record.renavan || "—"}</td>
+            <td>${record.codigoCRVe || "—"}</td>
+            <td>${record.codigoCLAe || "—"}</td>
+            <td>${record.codigoATPVe || "—"}</td>
             <td>${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}</td>
-            <td>${record.custosExtras ? formatCurrency(record.custosExtras) : "—"}</td>
-            <td>${totalInvestido ? formatCurrency(totalInvestido) : "—"}</td>
             <td>${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}</td>
             <td>
                 <span class="profit ${profitClass}">
@@ -165,7 +227,7 @@ const updateSummary = (records) => {
     const totals = records.reduce(
         (acc, record) => {
             if (record.tipo === "Compra") {
-                acc.invested += (record.valorCompra || 0) + (record.custosExtras || 0);
+                acc.invested += record.valorCompra || 0;
             }
             if (record.tipo === "Venda") {
                 acc.sold += record.valorVenda || 0;
@@ -202,8 +264,24 @@ const handleFilterInput = (event) => {
     if (!target?.name || !(target.name in state.filters)) return;
     if (target.name === "placa") {
         state.filters.placa = normalizePlate(target.value);
+    } else if (target.type === "date") {
+        state.filters[target.name] = target.value;
     } else {
         state.filters[target.name] = normalizeText(target.value);
+    }
+    render();
+};
+
+const clearFilters = () => {
+    state.filters = {
+        modelo: "",
+        placa: "",
+        comprador: "",
+        dataInicio: "",
+        dataFim: "",
+    };
+    if (elements.filterForm) {
+        elements.filterForm.reset();
     }
     render();
 };
@@ -223,14 +301,18 @@ const handleTableClick = (event) => {
 };
 
 const init = () => {
-    state.transactions = loadTransactions().map((record) =>
-        record.id ? record : { ...record, id: createId() }
-    );
+    state.transactions = loadTransactions().map((entry) => {
+        const normalized = entry.id ? entry : { ...entry, id: createId() };
+        return ensureVehicleFields(normalized);
+    });
     if (state.transactions.length) {
         persistTransactions();
     }
     if (elements.filterForm) {
         elements.filterForm.addEventListener("input", handleFilterInput);
+    }
+    if (elements.clearButton) {
+        elements.clearButton.addEventListener("click", clearFilters);
     }
     if (elements.tableBody) {
         elements.tableBody.addEventListener("click", handleTableClick);
