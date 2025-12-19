@@ -1,4 +1,5 @@
 const STORAGE_KEY = "veiculos-transactions";
+const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -23,6 +24,23 @@ const elements = {
         count: document.querySelector("[data-summary='count']"),
     },
 };
+const operationModal = {
+    container: document.getElementById("operation-modal"),
+    title: document.getElementById("operation-modal-title"),
+    form: document.getElementById("operation-modal-form"),
+    closeButtons: document.querySelectorAll("[data-close-modal]"),
+};
+const operationModalState = { id: null, tipo: null };
+const confirmModal = {
+    container: document.getElementById("confirm-modal"),
+    message: document.getElementById("confirm-modal-message"),
+    confirmBtn: document.querySelector("#confirm-modal [data-confirm='true']"),
+    cancelBtn: document.querySelector("#confirm-modal [data-confirm='false']"),
+    closeBtn: document.querySelector("[data-close-confirm]"),
+};
+let confirmModalCallback = null;
+const toastElement = document.getElementById("toast");
+let toastTimeout = null;
 
 const getStorage = () => {
     try {
@@ -84,6 +102,100 @@ const ensureVehicleFields = (record = {}) => {
     return normalized;
 };
 
+const purchaseModalFields = [
+    { name: "data", label: "Data da Compra", type: "date", required: true },
+    { name: "veiculo", label: "Veículo", type: "text", required: true },
+    { name: "marca", label: "Marca", type: "text", required: true },
+    { name: "modelo", label: "Modelo", type: "text", required: true },
+    { name: "cor", label: "Cor", type: "text" },
+    { name: "anoFabricacao", label: "Ano de Fabricação", type: "number" },
+    { name: "anoModelo", label: "Ano do Modelo", type: "number" },
+    { name: "placa", label: "Placa", type: "text", required: true },
+    { name: "cidade", label: "Cidade", type: "text" },
+    { name: "uf", label: "UF", type: "text" },
+    { name: "parceiro", label: "Origem / Fornecedor", type: "text" },
+    { name: "chassi", label: "Chassi", type: "text" },
+    { name: "renavan", label: "Renavam", type: "text" },
+    { name: "codigoCRVe", label: "Código CRVe", type: "text" },
+    { name: "codigoCLAe", label: "Código CLAe", type: "text" },
+    { name: "codigoATPVe", label: "Código ATPVe", type: "text" },
+    { name: "valorCompra", label: "Valor da Compra (R$)", type: "number", required: true },
+    { name: "custosExtras", label: "Custos Extras (R$)", type: "number" },
+    { name: "observacoes", label: "Observações", type: "textarea" },
+];
+
+const saleModalFields = [
+    { name: "data", label: "Data da Venda", type: "date", required: true },
+    { name: "parceiro", label: "Comprador", type: "text", required: true },
+    { name: "contato", label: "Contato", type: "text" },
+    { name: "modelo", label: "Modelo / Versão", type: "text", required: true },
+    { name: "placa", label: "Placa", type: "text", required: true },
+    { name: "valorCompra", label: "Valor da Compra (R$)", type: "number" },
+    { name: "custosExtras", label: "Custos Extras (R$)", type: "number" },
+    { name: "valorVenda", label: "Valor da Venda (R$)", type: "number", required: true },
+    { name: "observacoes", label: "Observações", type: "textarea" },
+];
+
+const escapeValue = (value) =>
+    value === null || value === undefined
+        ? ""
+        : value.toString().replace(/"/g, "&quot;");
+
+const buildFieldMarkup = (field, value = "") => {
+    const requiredAttr = field.required ? "required" : "";
+    const currentValue = value ?? "";
+    if (field.type === "textarea") {
+        return `
+            <label class="wide">
+                ${field.label}
+                <textarea name="${field.name}" rows="2" ${requiredAttr}>${currentValue}</textarea>
+            </label>
+        `;
+    }
+    return `
+        <label>
+            ${field.label}
+            <input type="${field.type}" name="${field.name}" value="${escapeValue(
+        currentValue
+    )}" ${requiredAttr}>
+        </label>
+    `;
+};
+
+const getPurchaseUpdatesFromForm = (data) => ({
+    data: data.get("data"),
+    veiculo: data.get("veiculo")?.trim(),
+    marca: data.get("marca")?.trim(),
+    modelo: data.get("modelo")?.trim(),
+    cor: data.get("cor")?.trim(),
+    anoFabricacao: data.get("anoFabricacao")?.trim(),
+    anoModelo: data.get("anoModelo")?.trim(),
+    placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+    cidade: data.get("cidade")?.trim(),
+    uf: data.get("uf")?.trim().toUpperCase() || "",
+    parceiro: data.get("parceiro")?.trim(),
+    chassi: data.get("chassi")?.trim(),
+    renavan: data.get("renavan")?.trim(),
+    codigoCRVe: data.get("codigoCRVe")?.trim(),
+    codigoCLAe: data.get("codigoCLAe")?.trim(),
+    codigoATPVe: data.get("codigoATPVe")?.trim(),
+    valorCompra: toNumber(data.get("valorCompra")),
+    custosExtras: toNumber(data.get("custosExtras")),
+    observacoes: data.get("observacoes")?.trim(),
+});
+
+const getSaleUpdatesFromForm = (data) => ({
+    data: data.get("data"),
+    parceiro: data.get("parceiro")?.trim(),
+    contato: data.get("contato")?.trim(),
+    modelo: data.get("modelo")?.trim(),
+    placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+    valorCompra: toNumber(data.get("valorCompra")),
+    custosExtras: toNumber(data.get("custosExtras")),
+    valorVenda: toNumber(data.get("valorVenda")),
+    observacoes: data.get("observacoes")?.trim(),
+});
+
 const normalizeISODate = (value) => {
     if (!value) return "";
     if (value.includes("/")) {
@@ -117,8 +229,122 @@ const calculateProfit = (record) => {
     return record.valorVenda - cost;
 };
 
+const openOperationModal = (record) => {
+    if (!operationModal.container || !operationModal.form) return;
+    const fields =
+        record.tipo === "Compra" ? purchaseModalFields : saleModalFields;
+    operationModal.title.textContent =
+        record.tipo === "Compra" ? "Editar compra" : "Editar venda";
+    operationModal.form.innerHTML = fields
+        .map((field) => buildFieldMarkup(field, record[field.name]))
+        .join("");
+    operationModal.form.dataset.tipo = record.tipo;
+    operationModalState.id = record.id;
+    operationModalState.tipo = record.tipo;
+    operationModal.container.classList.add("visible");
+    document.body.style.overflow = "hidden";
+};
+
+const closeOperationModal = () => {
+    if (!operationModal.container || !operationModal.form) return;
+    operationModal.container.classList.remove("visible");
+    operationModal.form.innerHTML = "";
+    operationModal.form.dataset.tipo = "";
+    document.body.style.overflow = "";
+    operationModalState.id = null;
+    operationModalState.tipo = null;
+};
+
+operationModal.closeButtons?.forEach((button) =>
+    button.addEventListener("click", closeOperationModal)
+);
+operationModal.container?.addEventListener("click", (event) => {
+    if (event.target === operationModal.container) {
+        closeOperationModal();
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && operationModal.container?.classList.contains("visible")) {
+        closeOperationModal();
+    }
+});
+
+operationModal.form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!operationModalState.id || !operationModalState.tipo) return;
+    const data = new FormData(operationModal.form);
+    if (operationModalState.tipo === "Compra") {
+        const updates = getPurchaseUpdatesFromForm(data);
+        updateTransaction(
+            operationModalState.id,
+            ensureVehicleFields({ ...updates })
+        );
+    } else {
+        const updates = getSaleUpdatesFromForm(data);
+        updateTransaction(operationModalState.id, updates);
+    }
+    closeOperationModal();
+});
+
+const openConfirmModal = (message, callback) => {
+    if (!confirmModal.container || !confirmModal.message) return;
+    confirmModal.message.textContent = message;
+    confirmModal.container.classList.add("visible");
+    document.body.style.overflow = "hidden";
+    confirmModalCallback = callback;
+};
+
+const closeConfirmModal = () => {
+    if (!confirmModal.container) return;
+    confirmModal.container.classList.remove("visible");
+    document.body.style.overflow = "";
+    confirmModalCallback = null;
+};
+
+confirmModal.confirmBtn?.addEventListener("click", () => {
+    if (confirmModalCallback) {
+        confirmModalCallback();
+    }
+    closeConfirmModal();
+});
+confirmModal.cancelBtn?.addEventListener("click", closeConfirmModal);
+confirmModal.closeBtn?.addEventListener("click", closeConfirmModal);
+confirmModal.container?.addEventListener("click", (event) => {
+    if (event.target === confirmModal.container) closeConfirmModal();
+});
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && confirmModal.container?.classList.contains("visible")) {
+        closeConfirmModal();
+    }
+});
+
+const showToast = (message, variant = "success") => {
+    if (!toastElement) return;
+    toastElement.textContent = message;
+    toastElement.classList.remove("toast-error");
+    if (variant === "error") {
+        toastElement.classList.add("toast-error");
+    } else {
+        toastElement.classList.remove("toast-error");
+    }
+    toastElement.classList.add("visible");
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toastElement.classList.remove("visible");
+    }, 2500);
+};
+
 const addTransaction = (record) => {
     state.transactions.unshift(record);
+    persistTransactions();
+    renderTransactions();
+    updateSummary();
+};
+const updateTransaction = (id, updates) => {
+    state.transactions = state.transactions.map((item) =>
+        item.id === id ? { ...item, ...updates } : item
+    );
     persistTransactions();
     renderTransactions();
     updateSummary();
@@ -195,6 +421,19 @@ const handleSaleSubmit = (event) => {
     event.currentTarget.reset();
 };
 
+const startEditTransaction = (id) => {
+    const record = state.transactions.find((item) => item.id === id);
+    if (!record) return;
+    openOperationModal(record);
+};
+
+const checkPendingEditRequest = () => {
+    const pendingId = localStorage.getItem(PENDING_EDIT_KEY);
+    if (!pendingId) return;
+    localStorage.removeItem(PENDING_EDIT_KEY);
+    startEditTransaction(pendingId);
+};
+
 const renderTransactions = () => {
     const tbody = elements.tableBody;
     if (!tbody) return;
@@ -261,7 +500,10 @@ const renderTransactions = () => {
                 <span class="notes">${record.observacoes || "—"}</span>
             </td>
             <td class="actions-cell">
-                <button class="table-button" data-action="delete" data-id="${record.id}">
+                <button class="table-button edit" data-action="edit" data-id="${record.id}">
+                    Editar
+                </button>
+                <button class="table-button delete" data-action="delete" data-id="${record.id}">
                     Excluir
                 </button>
             </td>
@@ -312,19 +554,26 @@ const init = () => {
     }
     if (elements.tableBody) {
         elements.tableBody.addEventListener("click", (event) => {
-            const button = event.target.closest("[data-action='delete']");
+            const button = event.target.closest("[data-action]");
             if (!button) return;
-            const { id } = button.dataset;
+            const { id, action } = button.dataset;
             if (!id) return;
-            const confirmed = window.confirm(
-                "Deseja remover este registro? Essa ação não pode ser desfeita."
-            );
-            if (!confirmed) return;
-            removeTransaction(id);
+            if (action === "delete") {
+                openConfirmModal(
+                    "Deseja remover este registro? Essa ação não pode ser desfeita.",
+                    () => {
+                        removeTransaction(id);
+                        showToast("Operação excluída com sucesso.");
+                    }
+                );
+            } else if (action === "edit") {
+                startEditTransaction(id);
+            }
         });
     }
     renderTransactions();
     updateSummary();
+    checkPendingEditRequest();
 };
 
 document.addEventListener("DOMContentLoaded", init);

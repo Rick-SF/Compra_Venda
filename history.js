@@ -1,4 +1,5 @@
 const STORAGE_KEY = "veiculos-transactions";
+const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -27,7 +28,17 @@ const elements = {
     },
     resultText: document.querySelector("[data-results-count]"),
     clearButton: document.getElementById("clear-filters"),
+    confirmModal: {
+        container: document.getElementById("confirm-modal"),
+        message: document.getElementById("confirm-modal-message"),
+        confirmBtn: document.querySelector("#confirm-modal [data-confirm='true']"),
+        cancelBtn: document.querySelector("#confirm-modal [data-confirm='false']"),
+        closeBtn: document.querySelector("[data-close-confirm]"),
+    },
 };
+let confirmCallback = null;
+const toastElement = document.getElementById("toast");
+let toastTimeout = null;
 
 const getStorage = () => {
     try {
@@ -213,7 +224,10 @@ const renderTable = (records) => {
                 <span class="notes">${record.observacoes || "—"}</span>
             </td>
             <td class="actions-cell">
-                <button class="table-button" data-action="delete" data-id="${record.id}">
+                <button class="table-button edit" data-action="edit" data-id="${record.id}">
+                    Editar
+                </button>
+                <button class="table-button delete" data-action="delete" data-id="${record.id}">
                     Excluir
                 </button>
             </td>
@@ -221,6 +235,55 @@ const renderTable = (records) => {
 
         tbody.appendChild(tr);
     });
+};
+
+const openConfirm = (message, callback) => {
+    const modal = elements.confirmModal;
+    if (!modal.container || !modal.message) return;
+    modal.message.textContent = message;
+    modal.container.classList.add("visible");
+    document.body.style.overflow = "hidden";
+    confirmCallback = callback;
+};
+
+const closeConfirm = () => {
+    const modal = elements.confirmModal;
+    if (!modal.container) return;
+    modal.container.classList.remove("visible");
+    document.body.style.overflow = "";
+    confirmCallback = null;
+};
+
+elements.confirmModal?.confirmBtn?.addEventListener("click", () => {
+    if (confirmCallback) confirmCallback();
+    closeConfirm();
+});
+elements.confirmModal?.cancelBtn?.addEventListener("click", closeConfirm);
+elements.confirmModal?.closeBtn?.addEventListener("click", closeConfirm);
+elements.confirmModal?.container?.addEventListener("click", (event) => {
+    if (event.target === elements.confirmModal.container) closeConfirm();
+});
+document.addEventListener("keydown", (event) => {
+    if (
+        event.key === "Escape" &&
+        elements.confirmModal.container?.classList.contains("visible")
+    ) {
+        closeConfirm();
+    }
+});
+
+const showToast = (message, variant = "success") => {
+    if (!toastElement) return;
+    toastElement.textContent = message;
+    toastElement.classList.remove("toast-error");
+    if (variant === "error") {
+        toastElement.classList.add("toast-error");
+    }
+    toastElement.classList.add("visible");
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toastElement.classList.remove("visible");
+    }, 2500);
 };
 
 const updateSummary = (records) => {
@@ -287,17 +350,23 @@ const clearFilters = () => {
 };
 
 const handleTableClick = (event) => {
-    const button = event.target.closest("[data-action='delete']");
+    const button = event.target.closest("[data-action]");
     if (!button) return;
-    const { id } = button.dataset;
+    const { id, action } = button.dataset;
     if (!id) return;
-    const confirmed = window.confirm(
-        "Deseja remover este registro? Essa ação não pode ser desfeita."
-    );
-    if (!confirmed) return;
-    state.transactions = state.transactions.filter((item) => item.id !== id);
-    persistTransactions();
-    render();
+    if (action === "delete") {
+        openConfirm("Deseja remover este registro? Essa ação não pode ser desfeita.", () => {
+            state.transactions = state.transactions.filter(
+                (item) => item.id !== id
+            );
+            persistTransactions();
+            render();
+            showToast("Operação excluída com sucesso.");
+        });
+    } else if (action === "edit") {
+        localStorage.setItem(PENDING_EDIT_KEY, id);
+        window.location.href = "index.html";
+    }
 };
 
 const init = () => {

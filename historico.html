@@ -126,6 +126,22 @@
             </section>
         </div>
 
+        <div class="modal" id="confirm-modal" aria-hidden="true">
+            <div class="modal-box confirm-box">
+                <div class="modal-header">
+                    <h3>Confirmar ação</h3>
+                    <button class="modal-close" type="button" data-close-confirm>✕</button>
+                </div>
+                <p id="confirm-modal-message">Tem certeza?</p>
+                <div class="confirm-actions">
+                    <button class="table-button edit" type="button" data-confirm="false">Cancelar</button>
+                    <button class="table-button delete" type="button" data-confirm="true">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast" aria-live="polite"></div>
+
         <script src="history.js" defer></script>
     </body>
 </html>
