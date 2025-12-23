@@ -1,4 +1,4 @@
-const STORAGE_KEY = "veiculos-transactions";
+const API_OPERATIONS = "/api/operations";
 const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -8,6 +8,19 @@ const currency = new Intl.NumberFormat("pt-BR", {
 
 const state = {
     transactions: [],
+};
+
+const jsonRequest = async (url, options = {}) => {
+    const response = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+    });
+    if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Erro ao comunicar com o servidor.");
+    }
+    if (response.status === 204) return null;
+    return response.json();
 };
 
 const createId = () =>
@@ -52,25 +65,13 @@ const getStorage = () => {
     }
 };
 
-const loadTransactions = () => {
-    const storage = getStorage();
-    if (!storage) return [];
+const loadTransactionsFromApi = async () => {
     try {
-        const raw = storage.getItem(STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
-};
-
-const persistTransactions = () => {
-    const storage = getStorage();
-    if (!storage) return;
-    try {
-        storage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
-    } catch {
-        // Ignora erros de armazenamento (sem suporte ou sem espaço).
+        const data = await jsonRequest(API_OPERATIONS);
+        state.transactions = Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao carregar operações.", "error");
     }
 };
 
@@ -270,19 +271,19 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-operationModal.form?.addEventListener("submit", (event) => {
+operationModal.form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!operationModalState.id || !operationModalState.tipo) return;
     const data = new FormData(operationModal.form);
     if (operationModalState.tipo === "Compra") {
         const updates = getPurchaseUpdatesFromForm(data);
-        updateTransaction(
+        await updateTransaction(
             operationModalState.id,
             ensureVehicleFields({ ...updates })
         );
     } else {
         const updates = getSaleUpdatesFromForm(data);
-        updateTransaction(operationModalState.id, updates);
+        await updateTransaction(operationModalState.id, updates);
     }
     closeOperationModal();
 });
@@ -335,29 +336,54 @@ const showToast = (message, variant = "success") => {
     }, 2500);
 };
 
-const addTransaction = (record) => {
-    state.transactions.unshift(record);
-    persistTransactions();
-    renderTransactions();
-    updateSummary();
-};
-const updateTransaction = (id, updates) => {
-    state.transactions = state.transactions.map((item) =>
-        item.id === id ? { ...item, ...updates } : item
-    );
-    persistTransactions();
-    renderTransactions();
-    updateSummary();
-};
-
-const removeTransaction = (id) => {
-    state.transactions = state.transactions.filter((item) => item.id !== id);
-    persistTransactions();
-    renderTransactions();
-    updateSummary();
+const addTransaction = async (record) => {
+    try {
+        const saved = await jsonRequest(API_OPERATIONS, {
+            method: "POST",
+            body: JSON.stringify(record),
+        });
+        state.transactions.unshift(saved);
+        renderTransactions();
+        updateSummary();
+        showToast("Operação cadastrada com sucesso.");
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao salvar operação.", "error");
+    }
 };
 
-const handlePurchaseSubmit = (event) => {
+const updateTransaction = async (id, updates) => {
+    try {
+        const updated = await jsonRequest(`${API_OPERATIONS}/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ ...updates, id }),
+        });
+        state.transactions = state.transactions.map((item) =>
+            item.id === id ? updated : item
+        );
+        renderTransactions();
+        updateSummary();
+        showToast("Operação atualizada.");
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao atualizar operação.", "error");
+    }
+};
+
+const removeTransaction = async (id) => {
+    try {
+        await jsonRequest(`${API_OPERATIONS}/${id}`, { method: "DELETE" });
+        state.transactions = state.transactions.filter((item) => item.id !== id);
+        renderTransactions();
+        updateSummary();
+        showToast("Operação excluída com sucesso.");
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao excluir operação.", "error");
+    }
+};
+
+const handlePurchaseSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const record = {
@@ -385,11 +411,11 @@ const handlePurchaseSubmit = (event) => {
         custosExtras: toNumber(data.get("custosExtras")),
         observacoes: data.get("observacoes")?.trim(),
     };
-    addTransaction(ensureVehicleFields(record));
+    await addTransaction(ensureVehicleFields(record));
     event.currentTarget.reset();
 };
 
-const handleSaleSubmit = (event) => {
+const handleSaleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const record = {
@@ -417,7 +443,7 @@ const handleSaleSubmit = (event) => {
         custosExtras: toNumber(data.get("custosExtras")),
         observacoes: data.get("observacoes")?.trim(),
     };
-    addTransaction(ensureVehicleFields(record));
+    await addTransaction(ensureVehicleFields(record));
     event.currentTarget.reset();
 };
 
@@ -538,14 +564,8 @@ const updateSummary = () => {
     elements.summary.count.textContent = state.transactions.length.toString();
 };
 
-const init = () => {
-    state.transactions = loadTransactions().map((entry) => {
-        const normalized = entry.id ? entry : { ...entry, id: createId() };
-        return ensureVehicleFields(normalized);
-    });
-    if (state.transactions.length) {
-        persistTransactions();
-    }
+const init = async () => {
+    await loadTransactionsFromApi();
     if (elements.purchaseForm) {
         elements.purchaseForm.addEventListener("submit", handlePurchaseSubmit);
     }
@@ -561,10 +581,7 @@ const init = () => {
             if (action === "delete") {
                 openConfirmModal(
                     "Deseja remover este registro? Essa ação não pode ser desfeita.",
-                    () => {
-                        removeTransaction(id);
-                        showToast("Operação excluída com sucesso.");
-                    }
+                    () => removeTransaction(id)
                 );
             } else if (action === "edit") {
                 startEditTransaction(id);

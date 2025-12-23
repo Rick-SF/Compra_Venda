@@ -1,4 +1,4 @@
-const STORAGE_KEY = "veiculos-transactions";
+const API_OPERATIONS = "/api/operations";
 const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -40,40 +40,25 @@ let confirmCallback = null;
 const toastElement = document.getElementById("toast");
 let toastTimeout = null;
 
-const getStorage = () => {
-    try {
-        return typeof window !== "undefined" && window.localStorage
-            ? window.localStorage
-            : null;
-    } catch {
-        return null;
+const jsonRequest = async (url, options = {}) => {
+    const response = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+    });
+    if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Erro ao comunicar com o servidor.");
     }
+    if (response.status === 204) return null;
+    return response.json();
 };
 
 const loadTransactions = () => {
-    const storage = getStorage();
-    if (!storage) return [];
-    try {
-        const raw = storage.getItem(STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
+    return jsonRequest(API_OPERATIONS);
 };
 
 const createId = () =>
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
-const persistTransactions = () => {
-    const storage = getStorage();
-    if (!storage) return;
-    try {
-        storage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
-    } catch {
-        // Ignora falhas silenciosamente
-    }
-};
 
 const formatCurrency = (value) => currency.format(value || 0);
 const normalizeText = (value) => value?.toString().trim().toLowerCase() || "";
@@ -369,13 +354,15 @@ const handleTableClick = (event) => {
     }
 };
 
-const init = () => {
-    state.transactions = loadTransactions().map((entry) => {
-        const normalized = entry.id ? entry : { ...entry, id: createId() };
-        return ensureVehicleFields(normalized);
-    });
-    if (state.transactions.length) {
-        persistTransactions();
+const init = async () => {
+    try {
+        const data = await loadTransactions();
+        state.transactions = Array.isArray(data)
+            ? data.map((entry) => ensureVehicleFields(entry))
+            : [];
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao carregar histórico.", "error");
     }
     if (elements.filterForm) {
         elements.filterForm.addEventListener("input", handleFilterInput);
