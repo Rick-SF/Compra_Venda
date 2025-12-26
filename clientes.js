@@ -1,8 +1,54 @@
-const CLIENTS_KEY = "veiculos-clients";
+const API_BASE = "/api";
+const API_CLIENTS = `${API_BASE}/clients`;
 
 const stateClients = {
     clients: [],
+    loading: false,
 };
+
+const generateClientId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+const jsonRequest = async (url, options = {}) => {
+    const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+    };
+
+    const config = {
+        method: options.method || "GET",
+        headers,
+    };
+
+    if (options.body !== undefined) {
+        config.body =
+            typeof options.body === "string"
+                ? options.body
+                : JSON.stringify(options.body);
+    }
+
+    const response = await fetch(url, config);
+    if (!response.ok) {
+        let message = "Erro ao comunicar com o servidor.";
+        try {
+            const error = await response.json();
+            if (error?.message) message = error.message;
+        } catch {
+            // ignore JSON parse errors
+        }
+        throw new Error(message);
+    }
+
+    if (response.status === 204) {
+        return null;
+    }
+
+    return response.json();
+};
+
+const fetchClients = () => jsonRequest(API_CLIENTS);
 
 const clientElements = {
     form: document.getElementById("client-form"),
@@ -26,39 +72,17 @@ let clientConfirmCallback = null;
 const toastElement = document.getElementById("toast");
 let toastTimeout = null;
 
-const getClientStorage = () => {
-    try {
-        return typeof window !== "undefined" && window.localStorage
-            ? window.localStorage
-            : null;
-    } catch {
-        return null;
-    }
-};
-
-const loadClients = () => {
-    const storage = getClientStorage();
-    if (!storage) return [];
-    try {
-        const raw = storage.getItem(CLIENTS_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
-};
-
-const persistClients = () => {
-    const storage = getClientStorage();
-    if (!storage) return;
-    try {
-        storage.setItem(CLIENTS_KEY, JSON.stringify(stateClients.clients));
-    } catch {
-        // ignore
-    }
-};
-
 const formatDocument = (value) => value?.toString().trim() || "";
+
+const parseClientFormData = (formData) => ({
+    nome: formData.get("nome")?.trim(),
+    cpf: formatDocument(formData.get("cpf")),
+    rg: formatDocument(formData.get("rg")),
+    cnh: formatDocument(formData.get("cnh")),
+    endereco: formData.get("endereco")?.trim(),
+    contato: formData.get("contato")?.trim(),
+    email: formData.get("email")?.trim(),
+});
 
 const clientModalFields = [
     { name: "nome", label: "Nome completo", type: "text", required: true },
@@ -73,8 +97,8 @@ const clientModalFields = [
 const escapeClientValue = (value) =>
     value ? value.toString().replace(/"/g, "&quot;") : "";
 
-const buildClientModalForm = (client = {}) =>
-    clientModalFields
+const buildClientModalForm = (client = {}) => {
+    const fields = clientModalFields
         .map((field) => {
             const required = field.required ? "required" : "";
             return `
@@ -88,10 +112,24 @@ const buildClientModalForm = (client = {}) =>
         })
         .join("");
 
+    return `
+        ${fields}
+        <div class="modal-actions">
+            <button type="submit" class="primary">Salvar alterações</button>
+        </div>
+    `;
+};
+
 const renderClients = () => {
     const tbody = clientElements.tableBody;
     if (!tbody) return;
     tbody.innerHTML = "";
+
+    if (stateClients.loading) {
+        tbody.innerHTML =
+            '<tr class="placeholder"><td colspan="8">Carregando clientes...</td></tr>';
+        return;
+    }
 
     if (!stateClients.clients.length) {
         tbody.innerHTML =
@@ -154,25 +192,25 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-clientModal.form?.addEventListener("submit", (event) => {
+clientModal.form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!clientModalId) return;
-    const data = new FormData(clientModal.form);
-    const updated = {
-        nome: data.get("nome")?.trim(),
-        cpf: formatDocument(data.get("cpf")),
-        rg: formatDocument(data.get("rg")),
-        cnh: formatDocument(data.get("cnh")),
-        endereco: data.get("endereco")?.trim(),
-        contato: data.get("contato")?.trim(),
-        email: data.get("email")?.trim(),
-    };
-    stateClients.clients = stateClients.clients.map((client) =>
-        client.id === clientModalId ? { ...client, ...updated } : client
-    );
-    persistClients();
-    renderClients();
-    closeClientModal();
+    const formData = new FormData(clientModal.form);
+    const payload = parseClientFormData(formData);
+    try {
+        const updated = await jsonRequest(`${API_CLIENTS}/${clientModalId}`, {
+            method: "PUT",
+            body: payload,
+        });
+        stateClients.clients = stateClients.clients.map((client) =>
+            client.id === clientModalId ? updated : client
+        );
+        renderClients();
+        showClientToast("Cliente atualizado com sucesso.");
+        closeClientModal();
+    } catch (error) {
+        showClientToast(error.message, "error");
+    }
 });
 
 const openClientConfirm = (message, callback) => {
@@ -190,8 +228,14 @@ const closeClientConfirm = () => {
     clientConfirmCallback = null;
 };
 
-clientConfirmModal.confirmBtn?.addEventListener("click", () => {
-    if (clientConfirmCallback) clientConfirmCallback();
+clientConfirmModal.confirmBtn?.addEventListener("click", async () => {
+    if (clientConfirmCallback) {
+        try {
+            await clientConfirmCallback();
+        } catch (error) {
+            showClientToast(error.message, "error");
+        }
+    }
     closeClientConfirm();
 });
 clientConfirmModal.cancelBtn?.addEventListener("click", closeClientConfirm);
@@ -222,41 +266,60 @@ const showClientToast = (message, variant = "success") => {
     }, 2500);
 };
 
-const handleClientSubmit = (event) => {
+const handleClientSubmit = async (event) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const client = {
-        id: `${Date.now().toString(36)}-${Math.random()
-            .toString(36)
-            .slice(2, 8)}`,
-        nome: data.get("nome")?.trim(),
-        cpf: formatDocument(data.get("cpf")),
-        rg: formatDocument(data.get("rg")),
-        cnh: formatDocument(data.get("cnh")),
-        endereco: data.get("endereco")?.trim(),
-        contato: data.get("contato")?.trim(),
-        email: data.get("email")?.trim(),
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const payload = {
+        id: generateClientId(),
+        ...parseClientFormData(data),
     };
-    stateClients.clients.unshift(client);
-    persistClients();
-    renderClients();
-    event.currentTarget.reset();
-};
-
-const deleteClient = (id) => {
-    stateClients.clients = stateClients.clients.filter(
-        (client) => client.id !== id
-    );
-    if (clientModalId === id) {
-        closeClientModal();
+    try {
+        const created = await jsonRequest(API_CLIENTS, {
+            method: "POST",
+            body: payload,
+        });
+        stateClients.clients.unshift(created);
+        renderClients();
+        if (form?.reset) form.reset();
+        showClientToast("Cliente cadastrado com sucesso.");
+    } catch (error) {
+        showClientToast(error.message, "error");
     }
-    persistClients();
-    renderClients();
-    showClientToast("Cliente excluído com sucesso.");
 };
 
-const initClients = () => {
-    stateClients.clients = loadClients();
+const deleteClient = async (id) => {
+    try {
+        await jsonRequest(`${API_CLIENTS}/${id}`, { method: "DELETE" });
+        stateClients.clients = stateClients.clients.filter(
+            (client) => client.id !== id
+        );
+        if (clientModalId === id) {
+            closeClientModal();
+        }
+        renderClients();
+        showClientToast("Cliente excluído com sucesso.");
+    } catch (error) {
+        showClientToast(error.message, "error");
+    }
+};
+
+const refreshClients = async () => {
+    stateClients.loading = true;
+    renderClients();
+    try {
+        const clients = await fetchClients();
+        stateClients.clients = Array.isArray(clients) ? clients : [];
+    } catch (error) {
+        stateClients.clients = [];
+        showClientToast(error.message, "error");
+    } finally {
+        stateClients.loading = false;
+        renderClients();
+    }
+};
+
+const initClients = async () => {
     if (clientElements.form) {
         clientElements.form.addEventListener("submit", handleClientSubmit);
     }
@@ -280,7 +343,12 @@ const initClients = () => {
             }
         });
     }
-    renderClients();
+    await refreshClients();
 };
 
-document.addEventListener("DOMContentLoaded", initClients);
+document.addEventListener("DOMContentLoaded", () => {
+    initClients().catch((error) => {
+        console.error(error);
+        showClientToast(error.message, "error");
+    });
+});

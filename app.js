@@ -236,9 +236,15 @@ const openOperationModal = (record) => {
         record.tipo === "Compra" ? purchaseModalFields : saleModalFields;
     operationModal.title.textContent =
         record.tipo === "Compra" ? "Editar compra" : "Editar venda";
-    operationModal.form.innerHTML = fields
+    const fieldsMarkup = fields
         .map((field) => buildFieldMarkup(field, record[field.name]))
         .join("");
+    operationModal.form.innerHTML = `
+        ${fieldsMarkup}
+        <div class="modal-actions">
+            <button type="submit" class="primary">Salvar alterações</button>
+        </div>
+    `;
     operationModal.form.dataset.tipo = record.tipo;
     operationModalState.id = record.id;
     operationModalState.tipo = record.tipo;
@@ -353,10 +359,21 @@ const addTransaction = async (record) => {
 };
 
 const updateTransaction = async (id, updates) => {
+    const original = state.transactions.find((item) => item.id === id);
+    if (!original) {
+        showToast("Registro não encontrado.", "error");
+        return;
+    }
+    const payload = {
+        ...original,
+        ...updates,
+        id: original.id,
+        tipo: original.tipo,
+    };
     try {
         const updated = await jsonRequest(`${API_OPERATIONS}/${id}`, {
             method: "PUT",
-            body: JSON.stringify({ ...updates, id }),
+            body: JSON.stringify(payload),
         });
         state.transactions = state.transactions.map((item) =>
             item.id === id ? updated : item
