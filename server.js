@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -10,7 +11,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.SQLITE_PATH || path.join(__dirname, "data", "app.db");
 
-const db = new Database(DB_PATH);
+const resolvedDbPath = path.isAbsolute(DB_PATH)
+    ? DB_PATH
+    : path.join(__dirname, DB_PATH);
+const dbDirectory = path.dirname(resolvedDbPath);
+fs.mkdirSync(dbDirectory, { recursive: true });
+
+const db = new Database(resolvedDbPath);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS clients (
