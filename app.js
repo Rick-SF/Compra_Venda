@@ -10,6 +10,8 @@ const state = {
     transactions: [],
 };
 
+window.auth?.ensureAuth?.();
+
 const jsonRequest = async (url, options = {}) => {
     const response = await fetch(url, {
         headers: { "Content-Type": "application/json" },

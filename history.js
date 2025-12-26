@@ -17,6 +17,8 @@ const state = {
     },
 };
 
+window.auth?.ensureAuth?.();
+
 const elements = {
     filterForm: document.getElementById("history-filter"),
     tableBody: document.getElementById("history-body"),

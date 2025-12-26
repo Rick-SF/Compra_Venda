@@ -13,6 +13,9 @@ Aplicação em Node.js + Express que serve o front-end (HTML/CSS/JS) e salva os 
    ```
 4. Rode `npm start` e acesse `http://localhost:3000`. Todos os cadastros ficam no arquivo `data/app.db`.
 
+> Deploy público: https://compra-e-venda-production.up.railway.app  
+> Credenciais padrão: usuário `admin` e senha `123456`.
+
 ## Preparando o deploy no Railway (explicação simples)
 
 1. **Criar conta e instalar o CLI**  

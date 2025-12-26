@@ -6,6 +6,8 @@ const stateClients = {
     loading: false,
 };
 
+window.auth?.ensureAuth?.();
+
 const generateClientId = () =>
     typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Login - Painel de Veículos</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body class="login-page">
+        <div class="login-wrapper">
+            <div class="card login-card">
+                <header class="login-header">
+                    <p class="badge">Acesso restrito</p>
+                    <h1>Entrar no painel</h1>
+                    <p class="lead">
+                        Informe o usuário e a senha combinados para liberar o painel de compras, vendas e clientes.
+                    </p>
+                </header>
+                <form id="login-form" class="login-form">
+                    <label>
+                        Usuário
+                        <input type="text" name="username" placeholder="ex.: admin" required>
+                    </label>
+                    <label>
+                        Senha
+                        <input type="password" name="password" placeholder="******" required>
+                    </label>
+                    <p class="helper-text">Use as credenciais fornecidas pela administração.</p>
+                    <p id="login-feedback" class="form-error" aria-live="polite"></p>
+                    <button type="submit">Entrar</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="toast" id="toast" aria-live="polite"></div>
+
+        <script src="auth.js" defer></script>
+        <script src="login.js" defer></script>
+    </body>
+</html>
