@@ -38,6 +38,7 @@ const elements = {
     purchaseForm: document.getElementById("purchase-form"),
     saleForm: document.getElementById("sale-form"),
     saleClientSelect: document.querySelector("[data-select='sale-client']"),
+    saleContactInput: document.querySelector("[data-sale-contact]"),
     tableBody: document.getElementById("transactions-body"),
     summary: {
         invested: document.querySelector("[data-summary='invested']"),
@@ -118,9 +119,20 @@ const populateSaleClientOptions = () => {
     state.clients.forEach((client) => {
         const option = document.createElement("option");
         option.value = client.nome || "";
+        option.dataset.contact = client.contato || "";
         option.textContent = client.nome || "Cliente sem nome";
         select.appendChild(option);
     });
+    handleSaleClientChange();
+};
+
+const handleSaleClientChange = () => {
+    const select = elements.saleClientSelect;
+    const contactInput = elements.saleContactInput;
+    if (!select || !contactInput) return;
+    const selectedOption = select.options[select.selectedIndex];
+    const contact = selectedOption?.dataset.contact || "";
+    contactInput.value = contact;
 };
 
 const vehicleFields = [
@@ -690,6 +702,7 @@ const init = async () => {
     if (elements.saleForm) {
         elements.saleForm.addEventListener("submit", handleSaleSubmit);
     }
+    elements.saleClientSelect?.addEventListener("change", handleSaleClientChange);
     if (elements.tableBody) {
         elements.tableBody.addEventListener("click", (event) => {
             const button = event.target.closest("[data-action]");
