@@ -1,4 +1,5 @@
-const API_OPERATIONS = "/api/operations";
+﻿const API_OPERATIONS = "/api/operations";
+const API_CLIENTS = "/api/clients";
 const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -12,6 +13,7 @@ const percentage = new Intl.NumberFormat("pt-BR", {
 
 const state = {
     transactions: [],
+    clients: [],
 };
 
 window.auth?.ensureAuth?.();
@@ -35,6 +37,7 @@ const createId = () =>
 const elements = {
     purchaseForm: document.getElementById("purchase-form"),
     saleForm: document.getElementById("sale-form"),
+    saleClientSelect: document.querySelector("[data-select='sale-client']"),
     tableBody: document.getElementById("transactions-body"),
     summary: {
         invested: document.querySelector("[data-summary='invested']"),
@@ -80,6 +83,44 @@ const loadTransactionsFromApi = async () => {
         console.error(error);
         showToast("Erro ao carregar operações.", "error");
     }
+};
+
+const loadClientsFromApi = async () => {
+    try {
+        const data = await jsonRequest(API_CLIENTS);
+        state.clients = Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error(error);
+        state.clients = [];
+        showToast("Erro ao carregar clientes.", "error");
+    } finally {
+        populateSaleClientOptions();
+    }
+};
+
+const populateSaleClientOptions = () => {
+    const select = elements.saleClientSelect;
+    if (!select) return;
+    select.innerHTML = "";
+    if (!state.clients.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Cadastre um cliente";
+        select.appendChild(option);
+        select.disabled = true;
+        return;
+    }
+    select.disabled = false;
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecione um cliente";
+    select.appendChild(placeholder);
+    state.clients.forEach((client) => {
+        const option = document.createElement("option");
+        option.value = client.nome || "";
+        option.textContent = client.nome || "Cliente sem nome";
+        select.appendChild(option);
+    });
 };
 
 const vehicleFields = [
@@ -133,7 +174,17 @@ const purchaseModalFields = [
 
 const saleModalFields = [
     { name: "data", label: "Data da Venda", type: "date", required: true },
-    { name: "parceiro", label: "Comprador", type: "text", required: true },
+    {
+        name: "parceiro",
+        label: "Comprador",
+        type: "select",
+        required: true,
+        options: () =>
+            state.clients.map((client) => ({
+                value: client.nome || "",
+                label: client.nome || "Cliente sem nome",
+            })),
+    },
     { name: "contato", label: "Contato", type: "text" },
     { name: "modelo", label: "Modelo / Versão", type: "text", required: true },
     { name: "placa", label: "Placa", type: "text", required: true },
@@ -149,9 +200,46 @@ const escapeValue = (value) =>
         ? ""
         : value.toString().replace(/"/g, "&quot;");
 
+const getFieldOptions = (field) => {
+    if (typeof field.options === "function") {
+        return field.options();
+    }
+    return field.options || [];
+};
+
 const buildFieldMarkup = (field, value = "") => {
     const requiredAttr = field.required ? "required" : "";
     const currentValue = value ?? "";
+    if (field.type === "select") {
+        const options = getFieldOptions(field);
+        const hasCurrent =
+            currentValue &&
+            !options.some((opt) => opt.value === currentValue || opt === currentValue);
+        const optionMarkup = [
+            '<option value="">Selecione um cliente</option>',
+            ...options.map((opt) => {
+                const optionValue = typeof opt === "string" ? opt : opt.value;
+                const optionLabel = typeof opt === "string" ? opt : opt.label;
+                const selected = optionValue === currentValue ? "selected" : "";
+                return `<option value="${escapeValue(optionValue)}" ${selected}>${escapeValue(
+                    optionLabel || optionValue
+                )}</option>`;
+            }),
+            hasCurrent
+                ? `<option value="${escapeValue(currentValue)}" selected>${escapeValue(
+                      currentValue
+                  )}</option>`
+                : "",
+        ].join("");
+        return `
+            <label>
+                ${field.label}
+                <select name="${field.name}" ${requiredAttr}>
+                    ${optionMarkup}
+                </select>
+            </label>
+        `;
+    }
     if (field.type === "textarea") {
         return `
             <label class="wide">
@@ -594,6 +682,7 @@ const updateSummary = () => {
 };
 
 const init = async () => {
+    await loadClientsFromApi();
     await loadTransactionsFromApi();
     if (elements.purchaseForm) {
         elements.purchaseForm.addEventListener("submit", handlePurchaseSubmit);

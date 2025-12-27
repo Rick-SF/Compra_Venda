@@ -1,4 +1,5 @@
 const API_OPERATIONS = "/api/operations";
+const API_CLIENTS = "/api/clients";
 const PENDING_EDIT_KEY = "veiculos-edit-pending";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -8,6 +9,7 @@ const currency = new Intl.NumberFormat("pt-BR", {
 
 const state = {
     transactions: [],
+    clients: [],
     filters: {
         modelo: "",
         placa: "",
@@ -22,6 +24,7 @@ window.auth?.ensureAuth?.();
 const elements = {
     filterForm: document.getElementById("history-filter"),
     tableBody: document.getElementById("history-body"),
+    clientFilterSelect: document.querySelector("[data-select='history-client']"),
     summary: {
         invested: document.querySelector("[data-summary='invested']"),
         sold: document.querySelector("[data-summary='sold']"),
@@ -55,9 +58,8 @@ const jsonRequest = async (url, options = {}) => {
     return response.json();
 };
 
-const loadTransactions = () => {
-    return jsonRequest(API_OPERATIONS);
-};
+const loadTransactions = () => jsonRequest(API_OPERATIONS);
+const loadClients = () => jsonRequest(API_CLIENTS);
 
 const createId = () =>
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -358,6 +360,14 @@ const handleTableClick = (event) => {
 
 const init = async () => {
     try {
+        const clients = await loadClients();
+        state.clients = Array.isArray(clients) ? clients : [];
+        populateClientFilter();
+    } catch (error) {
+        console.error(error);
+        state.clients = [];
+    }
+    try {
         const data = await loadTransactions();
         state.transactions = Array.isArray(data)
             ? data.map((entry) => ensureVehicleFields(entry))
@@ -379,3 +389,24 @@ const init = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", init);
+const populateClientFilter = () => {
+    const select = elements.clientFilterSelect;
+    if (!select) return;
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Todos os clientes/fornecedores";
+    select.appendChild(placeholder);
+
+    if (!state.clients.length) {
+        select.disabled = true;
+        return;
+    }
+    select.disabled = false;
+    state.clients.forEach((client) => {
+        const option = document.createElement("option");
+        option.value = client.nome || "";
+        option.textContent = client.nome || "Cliente sem nome";
+        select.appendChild(option);
+    });
+};
