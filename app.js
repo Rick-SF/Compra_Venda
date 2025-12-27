@@ -5,6 +5,10 @@ const currency = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
 });
+const percentage = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
 
 const state = {
     transactions: [],
@@ -37,6 +41,7 @@ const elements = {
         sold: document.querySelector("[data-summary='sold']"),
         profit: document.querySelector("[data-summary='profit']"),
         count: document.querySelector("[data-summary='count']"),
+        profitPercent: document.querySelector("[data-summary='profit-percent']"),
     },
 };
 const operationModal = {
@@ -219,6 +224,7 @@ const normalizeISODate = (value) => {
 
 const toNumber = (value) => Number(value) || 0;
 const formatCurrency = (value) => currency.format(value || 0);
+const formatPercent = (value) => `${percentage.format(value || 0)}%`;
 const formatDate = (value) => {
     const isoDate = normalizeISODate(value);
     if (!isoDate) return "—";
@@ -575,11 +581,16 @@ const updateSummary = () => {
             profit: 0,
         }
     );
+    const profitPercent =
+        totals.invested > 0 ? (totals.profit / totals.invested) * 100 : 0;
 
     elements.summary.invested.textContent = formatCurrency(totals.invested);
     elements.summary.sold.textContent = formatCurrency(totals.sold);
     elements.summary.profit.textContent = formatCurrency(totals.profit);
     elements.summary.count.textContent = state.transactions.length.toString();
+    if (elements.summary.profitPercent) {
+        elements.summary.profitPercent.textContent = formatPercent(profitPercent);
+    }
 };
 
 const init = async () => {
