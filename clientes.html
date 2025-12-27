@@ -60,6 +60,10 @@
                         E-mail
                         <input type="email" name="email" placeholder="cliente@email.com">
                     </label>
+                    <label>
+                        Observações
+                        <textarea name="observacoes" rows="2" placeholder="Detalhes relevantes do cliente"></textarea>
+                    </label>
                     <button type="submit" name="BtnClient">Salvar cliente</button>
                 </form>
             </section>
@@ -80,12 +84,13 @@
                                 <th>Endereço</th>
                                 <th>Contato</th>
                                 <th>E-mail</th>
+                                <th>Observações</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="clients-table">
                             <tr class="placeholder">
-                                <td colspan="8">Nenhum cliente cadastrado.</td>
+                                <td colspan="9">Nenhum cliente cadastrado.</td>
                             </tr>
                         </tbody>
                     </table>

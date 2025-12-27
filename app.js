@@ -109,6 +109,9 @@ const populateSaleClientOptions = () => {
         option.textContent = "Cadastre um cliente";
         select.appendChild(option);
         select.disabled = true;
+        if (elements.saleContactInput) {
+            elements.saleContactInput.value = "";
+        }
         return;
     }
     select.disabled = false;

@@ -29,6 +29,7 @@ db.exec(`
         endereco TEXT,
         contato TEXT,
         email TEXT,
+        observacoes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -61,6 +62,15 @@ db.exec(`
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 `);
+
+const ensureColumn = (table, column, definition) => {
+    const info = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!info.some((col) => col.name === column)) {
+        db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+    }
+};
+
+ensureColumn("clients", "observacoes", "TEXT");
 
 app.use(cors());
 app.use(express.json());
@@ -157,9 +167,9 @@ app.post("/api/clients", (req, res) => {
     }
     const insert = db.prepare(`
         INSERT INTO clients (
-            id, nome, cpf, rg, cnh, endereco, contato, email
+            id, nome, cpf, rg, cnh, endereco, contato, email, observacoes
         ) VALUES (
-            @id, @nome, @cpf, @rg, @cnh, @endereco, @contato, @email
+            @id, @nome, @cpf, @rg, @cnh, @endereco, @contato, @email, @observacoes
         )
     `);
     insert.run(client);
@@ -178,6 +188,7 @@ app.put("/api/clients/:id", (req, res) => {
             endereco=@endereco,
             contato=@contato,
             email=@email,
+            observacoes=@observacoes,
             updated_at=CURRENT_TIMESTAMP
         WHERE id=@id
     `);

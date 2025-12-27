@@ -84,16 +84,24 @@ const parseClientFormData = (formData) => ({
     endereco: formData.get("endereco")?.trim(),
     contato: formData.get("contato")?.trim(),
     email: formData.get("email")?.trim(),
+    observacoes: formData.get("observacoes")?.trim(),
 });
+
+const displayClientValue = (value) => {
+    if (value === null || value === undefined) return "—";
+    const text = value.toString().trim();
+    return text.length ? text : "—";
+};
 
 const clientModalFields = [
     { name: "nome", label: "Nome completo", type: "text", required: true },
     { name: "cpf", label: "CPF", type: "text", required: true },
     { name: "rg", label: "RG", type: "text" },
     { name: "cnh", label: "CNH", type: "text" },
-    { name: "endereco", label: "Endereço", type: "text" },
+    { name: "endereco", label: "Endereço", type: "text", wide: true },
     { name: "contato", label: "Contato", type: "text", required: true },
     { name: "email", label: "E-mail", type: "email" },
+    { name: "observacoes", label: "Observações", type: "textarea" },
 ];
 
 const escapeClientValue = (value) =>
@@ -103,12 +111,19 @@ const buildClientModalForm = (client = {}) => {
     const fields = clientModalFields
         .map((field) => {
             const required = field.required ? "required" : "";
-            return `
-                <label class="${field.name === "endereco" ? "wide" : ""}">
+            const value = escapeClientValue(client[field.name] || "");
+            if (field.type === "textarea") {
+                return `
+                <label class="${field.wide ? "wide" : ""}">
                     ${field.label}
-                    <input type="${field.type}" name="${field.name}" value="${escapeClientValue(
-                client[field.name] || ""
-            )}" ${required}>
+                    <textarea name="${field.name}" rows="3" ${required}>${value}</textarea>
+                </label>
+            `;
+            }
+            return `
+                <label class="${field.wide ? "wide" : ""}">
+                    ${field.label}
+                    <input type="${field.type}" name="${field.name}" value="${value}" ${required}>
                 </label>
             `;
         })
@@ -129,26 +144,27 @@ const renderClients = () => {
 
     if (stateClients.loading) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="8">Carregando clientes...</td></tr>';
+            '<tr class="placeholder"><td colspan="9">Carregando clientes...</td></tr>';
         return;
     }
 
     if (!stateClients.clients.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="8">Nenhum cliente cadastrado.</td></tr>';
+            '<tr class="placeholder"><td colspan="9">Nenhum cliente cadastrado.</td></tr>';
         return;
     }
 
     stateClients.clients.forEach((client) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td>${client.nome || "—"}</td>
-            <td>${client.cpf || "—"}</td>
-            <td>${client.rg || "—"}</td>
-            <td>${client.cnh || "—"}</td>
-            <td>${client.endereco || "—"}</td>
-            <td>${client.contato || "—"}</td>
-            <td>${client.email || "—"}</td>
+            <td>${displayClientValue(client.nome)}</td>
+            <td>${displayClientValue(client.cpf)}</td>
+            <td>${displayClientValue(client.rg)}</td>
+            <td>${displayClientValue(client.cnh)}</td>
+            <td>${displayClientValue(client.endereco)}</td>
+            <td>${displayClientValue(client.contato)}</td>
+            <td>${displayClientValue(client.email)}</td>
+            <td><span class="notes">${displayClientValue(client.observacoes)}</span></td>
             <td class="actions-cell">
                 <button class="table-button edit" data-action="edit-client" data-id="${client.id}">
                     Editar

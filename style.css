@@ -139,10 +139,12 @@ body {
     overflow-wrap: anywhere;
 }
 
-.clients-page .card.card-history th:last-child,
-.clients-page .card.card-history td.actions-cell {
-    width: 140px;
-    text-align: center;
+.clients-page .card.card-history td .notes {
+    display: block;
+    max-height: 5.5rem;
+    overflow-y: auto;
+    white-space: pre-line;
+    padding-right: 0.25rem;
 }
 
 .clients-page .card.card-history td.actions-cell {
