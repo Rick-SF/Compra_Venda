@@ -6,6 +6,8 @@ const stateClients = {
     loading: false,
 };
 
+const CLIENT_FORM_DRAFT_KEY = "veiculos-draft-client";
+
 window.auth?.ensureAuth?.();
 
 const generateClientId = () =>
@@ -73,6 +75,59 @@ const clientConfirmModal = {
 let clientConfirmCallback = null;
 const toastElement = document.getElementById("toast");
 let toastTimeout = null;
+
+const getClientStorage = () => {
+    try {
+        return window.localStorage;
+    } catch {
+        return null;
+    }
+};
+
+const loadClientDraft = () => {
+    const storage = getClientStorage();
+    if (!clientElements.form || !storage) return;
+    const raw = storage.getItem(CLIENT_FORM_DRAFT_KEY);
+    if (!raw) return;
+    let data;
+    try {
+        data = JSON.parse(raw);
+    } catch {
+        return;
+    }
+    Object.entries(data).forEach(([name, value]) => {
+        const field = clientElements.form.elements.namedItem(name);
+        if (field && typeof field.value !== "undefined") {
+            field.value = value ?? "";
+        }
+    });
+};
+
+const saveClientDraft = () => {
+    const storage = getClientStorage();
+    if (!clientElements.form || !storage) return;
+    const formData = new FormData(clientElements.form);
+    const data = {};
+    formData.forEach((value, name) => {
+        data[name] = value;
+    });
+    storage.setItem(CLIENT_FORM_DRAFT_KEY, JSON.stringify(data));
+};
+
+const resetClientDraft = () => {
+    if (clientElements.form) {
+        clientElements.form.reset();
+    }
+    const storage = getClientStorage();
+    storage?.removeItem(CLIENT_FORM_DRAFT_KEY);
+};
+
+const setupClientDraftPersistence = () => {
+    if (!clientElements.form) return;
+    loadClientDraft();
+    clientElements.form.addEventListener("input", saveClientDraft);
+    clientElements.form.addEventListener("change", saveClientDraft);
+};
 
 const formatDocument = (value) => value?.toString().trim() || "";
 
@@ -270,6 +325,12 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
+document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-clear-form='client']");
+    if (!button) return;
+    resetClientDraft();
+});
+
 const showClientToast = (message, variant = "success") => {
     if (!toastElement) return;
     toastElement.textContent = message;
@@ -299,7 +360,7 @@ const handleClientSubmit = async (event) => {
         });
         stateClients.clients.unshift(created);
         renderClients();
-        if (form?.reset) form.reset();
+        resetClientDraft();
         showClientToast("Cliente cadastrado com sucesso.");
     } catch (error) {
         showClientToast(error.message, "error");
@@ -339,6 +400,7 @@ const refreshClients = async () => {
 
 const initClients = async () => {
     if (clientElements.form) {
+        setupClientDraftPersistence();
         clientElements.form.addEventListener("submit", handleClientSubmit);
     }
     if (clientElements.tableBody) {

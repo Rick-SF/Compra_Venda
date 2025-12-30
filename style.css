@@ -158,29 +158,19 @@ body {
 
 .clients-page .card.card-history .table-button {
     width: auto;
-    padding: 0.35rem 1rem;
+    padding: 0.45rem 1.1rem;
     white-space: nowrap;
-    margin-top: 5px;
-    margin-left: 300px;
+    margin: 0;
 }
 
-.clients-page .form-grid button {
-    width: 350px;
-    margin-left: 300px;
-    margin-top: 18px;
-}
-
-.clients-page .card.card-history td.actions-cell {
-    width: 120px;
-    text-align: center;
-}
-
-.clients-page .card.card-history .table-button {
-    display: inline-flex;
+.clients-page .form-actions {
     justify-content: center;
-    padding: 0.4rem 1rem;
-    margin-right: 275px;
 }
+
+.clients-page .form-actions button {
+    flex: 0 0 220px;
+}
+
 
 .card-header h2 {
     margin: 0 0 0.25rem 0;
@@ -197,6 +187,11 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
+}
+
+.form-wrapper > .card {
+    width: min(1000px, 100%);
+    margin: 0 auto;
 }
 
 .form-grid {
@@ -312,6 +307,39 @@ button {
 button:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 25px rgba(0, 234, 255, 0.2);
+}
+
+.form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.form-actions button {
+    grid-column: auto;
+    flex: 0 0 190px;
+    min-width: auto;
+}
+
+.button-outline {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.button-outline:hover {
+    background: linear-gradient(120deg, #ff4d6d, #ff8a5c);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 10px 25px rgba(255, 77, 109, 0.25);
+}
+
+.clients-page .form-actions button {
+    flex: 0 0 220px;
 }
 
 .top-nav button.nav-link {

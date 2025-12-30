@@ -16,6 +16,11 @@ const state = {
     clients: [],
 };
 
+const FORM_DRAFT_KEYS = {
+    purchase: "veiculos-draft-purchase",
+    sale: "veiculos-draft-sale",
+};
+
 const pageContext =
     typeof document !== "undefined" ? document.body?.dataset.page || "" : "";
 
@@ -80,6 +85,101 @@ let confirmModalCallback = null;
 const toastElement = document.getElementById("toast");
 let toastTimeout = null;
 
+const getSafeFieldSelector = (name) => {
+    if (typeof CSS !== "undefined" && CSS.escape) {
+        return CSS.escape(name);
+    }
+    return name.replace(/"/g, '\\"');
+};
+
+const applyFieldValue = (form, name, value) => {
+    if (!form) return;
+    const safeName = getSafeFieldSelector(name);
+    const field = form.querySelector(`[name="${safeName}"]`);
+    if (!field) return;
+    if (field.tagName === "SELECT") {
+        field.value = value ?? "";
+        if (value && field.value !== value) {
+            field.dataset.pendingValue = value;
+        } else {
+            delete field.dataset.pendingValue;
+        }
+    } else if (field.type === "checkbox") {
+        field.checked = Boolean(value);
+    } else if (field.type === "radio") {
+        const option = form.querySelector(
+            `[name="${safeName}"][value="${value}"]`
+        );
+        if (option) option.checked = true;
+    } else {
+        field.value = value ?? "";
+    }
+};
+
+const saveFormDraft = (form, key) => {
+    const storage = getStorage();
+    if (!form || !storage) return;
+    const data = {};
+    const formData = new FormData(form);
+    formData.forEach((formValue, formName) => {
+        data[formName] = formValue;
+    });
+    storage.setItem(key, JSON.stringify(data));
+};
+
+const loadFormDraft = (form, key) => {
+    const storage = getStorage();
+    if (!form || !storage) return;
+    const raw = storage.getItem(key);
+    if (!raw) return;
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        return;
+    }
+    Object.entries(parsed).forEach(([name, value]) =>
+        applyFieldValue(form, name, value)
+    );
+    if (form === elements.saleForm) {
+        handleSaleClientChange();
+    }
+};
+
+const clearFormDraftStorage = (key) => {
+    const storage = getStorage();
+    storage?.removeItem(key);
+};
+
+const resetFormDraft = (form, key) => {
+    if (!form) return;
+    form.reset();
+    clearFormDraftStorage(key);
+    if (form === elements.saleForm) {
+        if (elements.saleClientSelect) {
+            delete elements.saleClientSelect.dataset.pendingValue;
+        }
+        handleSaleClientChange();
+    }
+};
+
+const setupFormDraftPersistence = () => {
+    if (elements.purchaseForm) {
+        loadFormDraft(elements.purchaseForm, FORM_DRAFT_KEYS.purchase);
+        const handler = () =>
+            saveFormDraft(elements.purchaseForm, FORM_DRAFT_KEYS.purchase);
+        elements.purchaseForm.addEventListener("input", handler);
+        elements.purchaseForm.addEventListener("change", handler);
+    }
+    if (elements.saleForm) {
+        loadFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+        const handler = () =>
+            saveFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+        elements.saleForm.addEventListener("input", handler);
+        elements.saleForm.addEventListener("change", handler);
+    }
+};
+
 const getStorage = () => {
     try {
         return typeof window !== "undefined" && window.localStorage
@@ -116,6 +216,8 @@ const loadClientsFromApi = async () => {
 const populateSaleClientOptions = () => {
     const select = elements.saleClientSelect;
     if (!select) return;
+    const previousValue =
+        select.dataset.pendingValue || select.value || "";
     select.innerHTML = "";
     if (!state.clients.length) {
         const option = document.createElement("option");
@@ -123,6 +225,9 @@ const populateSaleClientOptions = () => {
         option.textContent = "Cadastre um cliente";
         select.appendChild(option);
         select.disabled = true;
+        if (previousValue) {
+            select.dataset.pendingValue = previousValue;
+        }
         if (elements.saleContactInput) {
             elements.saleContactInput.value = "";
         }
@@ -140,7 +245,19 @@ const populateSaleClientOptions = () => {
         option.textContent = client.nome || "Cliente sem nome";
         select.appendChild(option);
     });
-    handleSaleClientChange();
+    if (previousValue) {
+        select.value = previousValue;
+    }
+    if (previousValue && select.value !== previousValue) {
+        select.dataset.pendingValue = previousValue;
+    } else {
+        delete select.dataset.pendingValue;
+    }
+    const shouldAutofill =
+        !elements.saleContactInput || !elements.saleContactInput.value;
+    if (shouldAutofill) {
+        handleSaleClientChange();
+    }
 };
 
 const handleSaleClientChange = () => {
@@ -451,6 +568,17 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
+document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-clear-form]");
+    if (!button) return;
+    const target = button.dataset.clearForm;
+    if (target === "purchase") {
+        resetFormDraft(elements.purchaseForm, FORM_DRAFT_KEYS.purchase);
+    } else if (target === "sale") {
+        resetFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+    }
+});
+
 const showToast = (message, variant = "success") => {
     if (!toastElement) return;
     toastElement.textContent = message;
@@ -553,7 +681,7 @@ const handlePurchaseSubmit = async (event) => {
         observacoes: data.get("observacoes")?.trim(),
     };
     await addTransaction(ensureVehicleFields(record));
-    event.currentTarget.reset();
+    resetFormDraft(event.currentTarget, FORM_DRAFT_KEYS.purchase);
 };
 
 const handleSaleSubmit = async (event) => {
@@ -585,7 +713,7 @@ const handleSaleSubmit = async (event) => {
         observacoes: data.get("observacoes")?.trim(),
     };
     await addTransaction(ensureVehicleFields(record));
-    event.currentTarget.reset();
+    resetFormDraft(event.currentTarget, FORM_DRAFT_KEYS.sale);
 };
 
 const startEditTransaction = (id) => {
@@ -713,6 +841,7 @@ const updateSummary = () => {
 };
 
 const init = async () => {
+    setupFormDraftPersistence();
     await loadClientsFromApi();
     await loadTransactionsFromApi();
     if (elements.purchaseForm) {
