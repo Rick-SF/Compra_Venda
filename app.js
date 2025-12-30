@@ -16,6 +16,20 @@ const state = {
     clients: [],
 };
 
+const pageContext =
+    typeof document !== "undefined" ? document.body?.dataset.page || "" : "";
+
+const filterTransactionsForPage = (records) => {
+    if (!Array.isArray(records)) return [];
+    if (pageContext === "compras") {
+        return records.filter((item) => item.tipo === "Compra");
+    }
+    if (pageContext === "vendas") {
+        return records.filter((item) => item.tipo === "Venda");
+    }
+    return records;
+};
+
 window.auth?.ensureAuth?.();
 
 const jsonRequest = async (url, options = {}) => {
@@ -592,13 +606,15 @@ const renderTransactions = () => {
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    if (!state.transactions.length) {
+    const visibleRecords = filterTransactionsForPage(state.transactions);
+
+    if (!visibleRecords.length) {
         tbody.innerHTML =
             '<tr class="placeholder"><td colspan="22">Nenhuma operação cadastrada ainda.</td></tr>';
         return;
     }
 
-    state.transactions.forEach((record) => {
+    visibleRecords.forEach((record) => {
         const tr = document.createElement("tr");
         if (record.observacoes) {
             tr.title = record.observacoes;
