@@ -8,6 +8,76 @@ const stateClients = {
 
 const CLIENT_FORM_DRAFT_KEY = "veiculos-draft-client";
 
+const stripNonDigits = (value, limit) => {
+    const digits = value ? value.toString().replace(/\D/g, "") : "";
+    return typeof limit === "number" ? digits.slice(0, limit) : digits;
+};
+
+const formatPhoneDisplay = (value) => {
+    const digits = stripNonDigits(value, 11);
+    if (!digits) return "";
+    const ddd = digits.slice(0, 2);
+    if (digits.length <= 2) return `(${digits}`;
+    if (digits.length <= 6) {
+        return `(${ddd}) ${digits.slice(2)}`;
+    }
+    if (digits.length <= 10) {
+        return `(${ddd}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return `(${ddd}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+};
+
+const formatCpfDisplay = (value) => {
+    const digits = stripNonDigits(value, 11);
+    if (!digits) return "";
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6)
+        return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9)
+        return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+            6
+        )}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+        6,
+        9
+    )}-${digits.slice(9, 11)}`;
+};
+
+const maskHandlers = {
+    phone: (input) => {
+        if (!input || input.dataset.maskAttached === "true") return;
+        const handle = () => {
+            input.value = formatPhoneDisplay(input.value);
+        };
+        input.addEventListener("input", handle);
+        input.dataset.maskAttached = "true";
+        handle();
+    },
+    cpf: (input) => {
+        if (!input || input.dataset.maskAttached === "true") return;
+        const handle = () => {
+            input.value = formatCpfDisplay(input.value);
+        };
+        input.addEventListener("input", handle);
+        input.dataset.maskAttached = "true";
+        handle();
+    },
+};
+
+const applyClientMasks = (root = document) => {
+    Object.entries(maskHandlers).forEach(([mask, handler]) => {
+        root
+            .querySelectorAll(`[data-mask='${mask}']`)
+            .forEach((input) => handler(input));
+    });
+};
+
+const normalizeClientRecord = (client = {}) => ({
+    ...client,
+    cpf: stripNonDigits(client.cpf, 11),
+    contato: stripNonDigits(client.contato, 11),
+});
+
 window.auth?.ensureAuth?.();
 
 const generateClientId = () =>
@@ -101,6 +171,7 @@ const loadClientDraft = () => {
             field.value = value ?? "";
         }
     });
+    applyClientMasks(clientElements.form);
 };
 
 const saveClientDraft = () => {
@@ -129,17 +200,17 @@ const setupClientDraftPersistence = () => {
     clientElements.form.addEventListener("change", saveClientDraft);
 };
 
-const formatDocument = (value) => value?.toString().trim() || "";
+const trimValue = (value) => value?.toString().trim() || "";
 
 const parseClientFormData = (formData) => ({
-    nome: formData.get("nome")?.trim(),
-    cpf: formatDocument(formData.get("cpf")),
-    rg: formatDocument(formData.get("rg")),
-    cnh: formatDocument(formData.get("cnh")),
-    endereco: formData.get("endereco")?.trim(),
-    contato: formData.get("contato")?.trim(),
-    email: formData.get("email")?.trim(),
-    observacoes: formData.get("observacoes")?.trim(),
+    nome: trimValue(formData.get("nome")),
+    cpf: stripNonDigits(formData.get("cpf"), 11),
+    rg: trimValue(formData.get("rg")),
+    cnh: trimValue(formData.get("cnh")),
+    endereco: trimValue(formData.get("endereco")),
+    contato: stripNonDigits(formData.get("contato"), 11),
+    email: trimValue(formData.get("email")),
+    observacoes: trimValue(formData.get("observacoes")),
 });
 
 const displayClientValue = (value) => {
@@ -148,13 +219,17 @@ const displayClientValue = (value) => {
     return text.length ? text : "—";
 };
 
+const displayCpfValue = (value) => {
+    const digits = stripNonDigits(value, 11);
+    return digits || "—";
+};
 const clientModalFields = [
     { name: "nome", label: "Nome completo", type: "text", required: true },
-    { name: "cpf", label: "CPF", type: "text", required: true },
+    { name: "cpf", label: "CPF", type: "text", required: true, mask: "cpf" },
     { name: "rg", label: "RG", type: "text" },
     { name: "cnh", label: "CNH", type: "text" },
     { name: "endereco", label: "Endereço", type: "text", wide: true },
-    { name: "contato", label: "Contato", type: "text", required: true },
+    { name: "contato", label: "Contato", type: "text", required: true, mask: "phone" },
     { name: "email", label: "E-mail", type: "email" },
     { name: "observacoes", label: "Observações", type: "textarea" },
 ];
@@ -162,11 +237,27 @@ const clientModalFields = [
 const escapeClientValue = (value) =>
     value ? value.toString().replace(/"/g, "&quot;") : "";
 
+const formatValueForMask = (mask, value) => {
+    if (!mask) return value ?? "";
+    if (mask === "phone") {
+        return formatPhoneDisplay(value);
+    }
+    if (mask === "cpf") {
+        return formatCpfDisplay(value);
+    }
+    return value ?? "";
+};
+
 const buildClientModalForm = (client = {}) => {
     const fields = clientModalFields
         .map((field) => {
             const required = field.required ? "required" : "";
-            const value = escapeClientValue(client[field.name] || "");
+            const formattedValue = formatValueForMask(
+                field.mask,
+                client[field.name]
+            );
+            const value = escapeClientValue(formattedValue || "");
+            const maskAttr = field.mask ? ` data-mask="${field.mask}"` : "";
             if (field.type === "textarea") {
                 return `
                 <label class="${field.wide ? "wide" : ""}">
@@ -178,7 +269,7 @@ const buildClientModalForm = (client = {}) => {
             return `
                 <label class="${field.wide ? "wide" : ""}">
                     ${field.label}
-                    <input type="${field.type}" name="${field.name}" value="${value}" ${required}>
+                    <input type="${field.type}" name="${field.name}" value="${value}" ${required}${maskAttr}>
                 </label>
             `;
         })
@@ -213,11 +304,11 @@ const renderClients = () => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${displayClientValue(client.nome)}</td>
-            <td>${displayClientValue(client.cpf)}</td>
+            <td>${displayCpfValue(client.cpf)}</td>
             <td>${displayClientValue(client.rg)}</td>
             <td>${displayClientValue(client.cnh)}</td>
             <td>${displayClientValue(client.endereco)}</td>
-            <td>${displayClientValue(client.contato)}</td>
+            <td>${displayClientValue(formatPhoneDisplay(client.contato))}</td>
             <td>${displayClientValue(client.email)}</td>
             <td><span class="notes">${displayClientValue(client.observacoes)}</span></td>
             <td class="actions-cell">
@@ -238,6 +329,7 @@ const openClientModal = (client) => {
     clientModalId = client.id;
     clientModal.title.textContent = `Editar ${client.nome || "cliente"}`;
     clientModal.form.innerHTML = buildClientModalForm(client);
+    applyClientMasks(clientModal.form);
     clientModal.container.classList.add("visible");
     document.body.style.overflow = "hidden";
 };
@@ -276,7 +368,7 @@ clientModal.form?.addEventListener("submit", async (event) => {
             body: payload,
         });
         stateClients.clients = stateClients.clients.map((client) =>
-            client.id === clientModalId ? updated : client
+            client.id === clientModalId ? normalizeClientRecord(updated) : client
         );
         renderClients();
         showClientToast("Cliente atualizado com sucesso.");
@@ -358,7 +450,7 @@ const handleClientSubmit = async (event) => {
             method: "POST",
             body: payload,
         });
-        stateClients.clients.unshift(created);
+        stateClients.clients.unshift(normalizeClientRecord(created));
         renderClients();
         resetClientDraft();
         showClientToast("Cliente cadastrado com sucesso.");
@@ -388,7 +480,9 @@ const refreshClients = async () => {
     renderClients();
     try {
         const clients = await fetchClients();
-        stateClients.clients = Array.isArray(clients) ? clients : [];
+        stateClients.clients = Array.isArray(clients)
+            ? clients.map(normalizeClientRecord)
+            : [];
     } catch (error) {
         stateClients.clients = [];
         showClientToast(error.message, "error");
@@ -401,6 +495,7 @@ const refreshClients = async () => {
 const initClients = async () => {
     if (clientElements.form) {
         setupClientDraftPersistence();
+        applyClientMasks(clientElements.form);
         clientElements.form.addEventListener("submit", handleClientSubmit);
     }
     if (clientElements.tableBody) {

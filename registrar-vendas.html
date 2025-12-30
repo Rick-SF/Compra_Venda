@@ -54,7 +54,7 @@
                         </label>
                         <label>
                             Contato
-                            <input type="text" name="contato" placeholder="Telefone ou e-mail" data-sale-contact>
+                            <input type="text" name="contato" placeholder="Telefone ou e-mail" data-sale-contact data-mask="phone">
                         </label>
                         <label>
                             Modelo / Versão
@@ -62,7 +62,9 @@
                         </label>
                         <label>
                             Placa
-                            <input type="text" name="placa" placeholder="ABC1D23" maxlength="7" required>
+                            <select name="placa" data-select="sale-plate" required>
+                                <option value="">Selecione uma placa comprada</option>
+                            </select>
                         </label>
                         <label>
                             Valor da Compra (R$)

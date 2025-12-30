@@ -24,6 +24,48 @@ const FORM_DRAFT_KEYS = {
 const pageContext =
     typeof document !== "undefined" ? document.body?.dataset.page || "" : "";
 
+const stripNonDigits = (value, limit) => {
+    const digits = value ? value.toString().replace(/\D/g, "") : "";
+    return typeof limit === "number" ? digits.slice(0, limit) : digits;
+};
+
+const normalizePlate = (value) =>
+    value?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
+
+const formatPhoneDisplay = (value) => {
+    const digits = stripNonDigits(value, 11);
+    if (!digits) return "";
+    const ddd = digits.slice(0, 2);
+    if (digits.length <= 2) return `(${digits}`;
+    if (digits.length <= 6) {
+        return `(${ddd}) ${digits.slice(2)}`;
+    }
+    if (digits.length <= 10) {
+        return `(${ddd}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return `(${ddd}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+};
+
+const maskHandlers = {
+    phone: (input) => {
+        if (!input || input.dataset.maskAttached === "true") return;
+        const handle = () => {
+            input.value = formatPhoneDisplay(input.value);
+        };
+        input.addEventListener("input", handle);
+        input.dataset.maskAttached = "true";
+        handle();
+    },
+};
+
+const applyInputMasks = (root = document) => {
+    Object.entries(maskHandlers).forEach(([mask, handler]) => {
+        root
+            .querySelectorAll(`[data-mask='${mask}']`)
+            .forEach((input) => handler(input));
+    });
+};
+
 const filterTransactionsForPage = (records) => {
     if (!Array.isArray(records)) return [];
     if (pageContext === "compras") {
@@ -33,6 +75,24 @@ const filterTransactionsForPage = (records) => {
         return records.filter((item) => item.tipo === "Venda");
     }
     return records;
+};
+
+const hasPurchaseWithPlate = (plate) => {
+    const normalized = normalizePlate(plate);
+    if (!normalized) return false;
+    return state.transactions.some(
+        (item) =>
+            item.tipo === "Compra" && normalizePlate(item.placa) === normalized
+    );
+};
+
+const hasSaleWithPlate = (plate) => {
+    const normalized = normalizePlate(plate);
+    if (!normalized) return false;
+    return state.transactions.some(
+        (item) =>
+            item.tipo === "Venda" && normalizePlate(item.placa) === normalized
+    );
 };
 
 window.auth?.ensureAuth?.();
@@ -58,6 +118,7 @@ const elements = {
     saleForm: document.getElementById("sale-form"),
     saleClientSelect: document.querySelector("[data-select='sale-client']"),
     saleContactInput: document.querySelector("[data-sale-contact]"),
+    salePlateSelect: document.querySelector("[data-select='sale-plate']"),
     tableBody: document.getElementById("transactions-body"),
     summary: {
         invested: document.querySelector("[data-summary='invested']"),
@@ -143,6 +204,7 @@ const loadFormDraft = (form, key) => {
     );
     if (form === elements.saleForm) {
         handleSaleClientChange();
+        handleSalePlateChange();
     }
 };
 
@@ -159,7 +221,11 @@ const resetFormDraft = (form, key) => {
         if (elements.saleClientSelect) {
             delete elements.saleClientSelect.dataset.pendingValue;
         }
+        if (elements.salePlateSelect) {
+            delete elements.salePlateSelect.dataset.pendingValue;
+        }
         handleSaleClientChange();
+        handleSalePlateChange();
     }
 };
 
@@ -194,6 +260,7 @@ const loadTransactionsFromApi = async () => {
     try {
         const data = await jsonRequest(API_OPERATIONS);
         state.transactions = Array.isArray(data) ? data : [];
+        populateSalePlateOptions();
     } catch (error) {
         console.error(error);
         showToast("Erro ao carregar operações.", "error");
@@ -203,7 +270,13 @@ const loadTransactionsFromApi = async () => {
 const loadClientsFromApi = async () => {
     try {
         const data = await jsonRequest(API_CLIENTS);
-        state.clients = Array.isArray(data) ? data : [];
+        state.clients = Array.isArray(data)
+            ? data.map((client) => ({
+                  ...client,
+                  contato: stripNonDigits(client.contato || ""),
+                  cpf: stripNonDigits(client.cpf || ""),
+              }))
+            : [];
     } catch (error) {
         console.error(error);
         state.clients = [];
@@ -241,7 +314,7 @@ const populateSaleClientOptions = () => {
     state.clients.forEach((client) => {
         const option = document.createElement("option");
         option.value = client.nome || "";
-        option.dataset.contact = client.contato || "";
+        option.dataset.contact = stripNonDigits(client.contato || "");
         option.textContent = client.nome || "Cliente sem nome";
         select.appendChild(option);
     });
@@ -260,13 +333,107 @@ const populateSaleClientOptions = () => {
     }
 };
 
+const findPurchaseByPlate = (plateValue) => {
+    if (!plateValue) return null;
+    const normalized = normalizePlate(plateValue);
+    return state.transactions.find(
+        (item) =>
+            item.tipo === "Compra" &&
+            normalizePlate(item.placa) === normalized
+    );
+};
+
+const populateSalePlateOptions = () => {
+    const select = elements.salePlateSelect;
+    if (!select) return;
+    const previousValue =
+        select.dataset.pendingValue || select.value || "";
+    select.innerHTML = "";
+    const purchases = state.transactions.filter(
+        (item) =>
+            item.tipo === "Compra" &&
+            item.placa &&
+            !hasSaleWithPlate(item.placa)
+    );
+    if (!purchases.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Cadastre uma compra para selecionar";
+        select.appendChild(option);
+        select.disabled = true;
+        if (previousValue) {
+            select.dataset.pendingValue = previousValue;
+        }
+        return;
+    }
+    select.disabled = false;
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecione uma placa comprada";
+    select.appendChild(placeholder);
+    const seen = new Set();
+    purchases.forEach((purchase) => {
+        const plate = purchase.placa;
+        if (!plate || seen.has(plate)) return;
+        seen.add(plate);
+        const option = document.createElement("option");
+        option.value = plate;
+        option.dataset.purchaseId = purchase.id;
+        const labelParts = [plate];
+        if (purchase.modelo) {
+            labelParts.push(purchase.modelo);
+        } else if (purchase.veiculo) {
+            labelParts.push(purchase.veiculo);
+        }
+        option.textContent = labelParts.join(" · ");
+        select.appendChild(option);
+    });
+    if (previousValue) {
+        select.value = previousValue;
+    }
+    if (previousValue && select.value !== previousValue) {
+        select.dataset.pendingValue = previousValue;
+    } else {
+        delete select.dataset.pendingValue;
+    }
+    handleSalePlateChange();
+};
+
 const handleSaleClientChange = () => {
     const select = elements.saleClientSelect;
     const contactInput = elements.saleContactInput;
     if (!select || !contactInput) return;
     const selectedOption = select.options[select.selectedIndex];
-    const contact = selectedOption?.dataset.contact || "";
-    contactInput.value = contact;
+    const contact = stripNonDigits(selectedOption?.dataset.contact || "");
+    contactInput.value = formatPhoneDisplay(contact);
+};
+
+const handleSalePlateChange = () => {
+    const select = elements.salePlateSelect;
+    if (!select || !elements.saleForm) return;
+    const selectedPlate = select.value;
+    const modelInput = elements.saleForm.querySelector("input[name='modelo']");
+    const valueCompraInput = elements.saleForm.querySelector(
+        "input[name='valorCompra']"
+    );
+    if (!selectedPlate) {
+        if (modelInput) modelInput.value = "";
+        if (valueCompraInput) valueCompraInput.value = "";
+        saveFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+        return;
+    }
+    const purchase = findPurchaseByPlate(selectedPlate);
+    if (!purchase) return;
+    if (modelInput) {
+        modelInput.value = purchase.modelo || purchase.veiculo || "";
+    }
+    if (valueCompraInput) {
+        valueCompraInput.value =
+            purchase.valorCompra !== undefined && purchase.valorCompra !== null
+                ? Number(purchase.valorCompra)
+                : "";
+    }
+    saveFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
 };
 
 const vehicleFields = [
@@ -282,6 +449,20 @@ const vehicleFields = [
     "codigoCRVe",
     "codigoCLAe",
     "codigoATPVe",
+];
+
+const purchaseDetailFields = [
+    "veiculo",
+    "marca",
+    "cor",
+    "anoFabricacao",
+    "anoModelo",
+    "cidade",
+    "uf",
+    "chassi",
+    "renavan",
+    "codigoCRVe",
+    "codigoCLAe",
 ];
 
 const ensureVehicleFields = (record = {}) => {
@@ -331,7 +512,7 @@ const saleModalFields = [
                 label: client.nome || "Cliente sem nome",
             })),
     },
-    { name: "contato", label: "Contato", type: "text" },
+    { name: "contato", label: "Contato", type: "text", mask: "phone" },
     { name: "modelo", label: "Modelo / Versão", type: "text", required: true },
     { name: "placa", label: "Placa", type: "text", required: true },
     { name: "valorCompra", label: "Valor da Compra (R$)", type: "number" },
@@ -346,6 +527,14 @@ const escapeValue = (value) =>
         ? ""
         : value.toString().replace(/"/g, "&quot;");
 
+const formatValueByMask = (mask, value) => {
+    if (!mask) return value ?? "";
+    if (mask === "phone") {
+        return formatPhoneDisplay(value);
+    }
+    return value ?? "";
+};
+
 const getFieldOptions = (field) => {
     if (typeof field.options === "function") {
         return field.options();
@@ -355,7 +544,10 @@ const getFieldOptions = (field) => {
 
 const buildFieldMarkup = (field, value = "") => {
     const requiredAttr = field.required ? "required" : "";
-    const currentValue = value ?? "";
+    const currentValue = field.mask
+        ? formatValueByMask(field.mask, value)
+        : value ?? "";
+    const maskAttr = field.mask ? ` data-mask="${field.mask}"` : "";
     if (field.type === "select") {
         const options = getFieldOptions(field);
         const hasCurrent =
@@ -398,8 +590,8 @@ const buildFieldMarkup = (field, value = "") => {
         <label>
             ${field.label}
             <input type="${field.type}" name="${field.name}" value="${escapeValue(
-        currentValue
-    )}" ${requiredAttr}>
+                currentValue
+            )}" ${requiredAttr}${maskAttr}>
         </label>
     `;
 };
@@ -412,7 +604,7 @@ const getPurchaseUpdatesFromForm = (data) => ({
     cor: data.get("cor")?.trim(),
     anoFabricacao: data.get("anoFabricacao")?.trim(),
     anoModelo: data.get("anoModelo")?.trim(),
-    placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+    placa: normalizePlate(data.get("placa")),
     cidade: data.get("cidade")?.trim(),
     uf: data.get("uf")?.trim().toUpperCase() || "",
     parceiro: data.get("parceiro")?.trim(),
@@ -428,9 +620,9 @@ const getPurchaseUpdatesFromForm = (data) => ({
 const getSaleUpdatesFromForm = (data) => ({
     data: data.get("data"),
     parceiro: data.get("parceiro")?.trim(),
-    contato: data.get("contato")?.trim(),
+    contato: stripNonDigits(data.get("contato")),
     modelo: data.get("modelo")?.trim(),
-    placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+    placa: normalizePlate(data.get("placa")),
     valorCompra: toNumber(data.get("valorCompra")),
     codigoATPVe: data.get("codigoATPVe")?.trim(),
     custosExtras: toNumber(data.get("custosExtras")),
@@ -487,6 +679,7 @@ const openOperationModal = (record) => {
             <button type="submit" class="primary">Salvar alterações</button>
         </div>
     `;
+    applyInputMasks(operationModal.form);
     operationModal.form.dataset.tipo = record.tipo;
     operationModalState.id = record.id;
     operationModalState.tipo = record.tipo;
@@ -602,6 +795,7 @@ const addTransaction = async (record) => {
             body: JSON.stringify(record),
         });
         state.transactions.unshift(saved);
+        populateSalePlateOptions();
         renderTransactions();
         updateSummary();
         showToast("Operação cadastrada com sucesso.");
@@ -631,6 +825,7 @@ const updateTransaction = async (id, updates) => {
         state.transactions = state.transactions.map((item) =>
             item.id === id ? updated : item
         );
+        populateSalePlateOptions();
         renderTransactions();
         updateSummary();
         showToast("Operação atualizada.");
@@ -644,6 +839,7 @@ const removeTransaction = async (id) => {
     try {
         await jsonRequest(`${API_OPERATIONS}/${id}`, { method: "DELETE" });
         state.transactions = state.transactions.filter((item) => item.id !== id);
+        populateSalePlateOptions();
         renderTransactions();
         updateSummary();
         showToast("Operação excluída com sucesso.");
@@ -656,6 +852,18 @@ const removeTransaction = async (id) => {
 const handlePurchaseSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const normalizedPlate = normalizePlate(data.get("placa"));
+    if (!normalizedPlate) {
+        showToast("Informe uma placa válida.", "error");
+        return;
+    }
+    if (hasPurchaseWithPlate(normalizedPlate)) {
+        showToast(
+            "Já existe uma compra cadastrada para essa placa.",
+            "error"
+        );
+        return;
+    }
     const record = {
         id: createId(),
         tipo: "Compra",
@@ -666,7 +874,7 @@ const handlePurchaseSubmit = async (event) => {
         cor: data.get("cor")?.trim(),
         anoFabricacao: data.get("anoFabricacao")?.trim(),
         anoModelo: data.get("anoModelo")?.trim(),
-        placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+        placa: normalizedPlate,
         cidade: data.get("cidade")?.trim(),
         uf: data.get("uf")?.trim().toUpperCase() || "",
         parceiro: data.get("parceiro")?.trim(),
@@ -687,6 +895,23 @@ const handlePurchaseSubmit = async (event) => {
 const handleSaleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const normalizedPlate = normalizePlate(data.get("placa"));
+    if (!normalizedPlate) {
+        showToast("Selecione uma placa válida.", "error");
+        return;
+    }
+    if (hasSaleWithPlate(normalizedPlate)) {
+        showToast("Essa placa já possui uma venda registrada.", "error");
+        return;
+    }
+    const purchaseReference = findPurchaseByPlate(normalizedPlate);
+    if (!purchaseReference) {
+        showToast(
+            "Cadastre a compra desse veículo antes de registrar a venda.",
+            "error"
+        );
+        return;
+    }
     const record = {
         id: createId(),
         tipo: "Venda",
@@ -697,11 +922,11 @@ const handleSaleSubmit = async (event) => {
         cor: "",
         anoFabricacao: "",
         anoModelo: "",
-        placa: data.get("placa")?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "",
+        placa: normalizedPlate,
         cidade: "",
         uf: "",
         parceiro: data.get("parceiro")?.trim(),
-        contato: data.get("contato")?.trim(),
+        contato: stripNonDigits(data.get("contato")),
         chassi: "",
         renavan: "",
         codigoCRVe: "",
@@ -712,6 +937,17 @@ const handleSaleSubmit = async (event) => {
         custosExtras: toNumber(data.get("custosExtras")),
         observacoes: data.get("observacoes")?.trim(),
     };
+    purchaseDetailFields.forEach((field) => {
+        if (purchaseReference[field]) {
+            record[field] = purchaseReference[field];
+        }
+    });
+    if (!record.modelo) {
+        record.modelo = purchaseReference.modelo || "";
+    }
+    if (!record.valorCompra) {
+        record.valorCompra = toNumber(purchaseReference.valorCompra);
+    }
     await addTransaction(ensureVehicleFields(record));
     resetFormDraft(event.currentTarget, FORM_DRAFT_KEYS.sale);
 };
@@ -757,6 +993,7 @@ const renderTransactions = () => {
                     : "profit-negative"
                 : "";
 
+        const contactDisplay = formatPhoneDisplay(record.contato);
         tr.innerHTML = `
             <td>${formatDate(record.data)}</td>
             <td><span class="tag ${typeClass}">${record.tipo}</span></td>
@@ -772,8 +1009,8 @@ const renderTransactions = () => {
             <td>
                 ${record.parceiro || "—"}
                 ${
-                    record.contato
-                        ? `<span class="contact">${record.contato}</span>`
+                    contactDisplay
+                        ? `<span class="contact">${contactDisplay}</span>`
                         : ""
                 }
             </td>
@@ -842,6 +1079,7 @@ const updateSummary = () => {
 
 const init = async () => {
     setupFormDraftPersistence();
+    applyInputMasks();
     await loadClientsFromApi();
     await loadTransactionsFromApi();
     if (elements.purchaseForm) {
@@ -851,6 +1089,7 @@ const init = async () => {
         elements.saleForm.addEventListener("submit", handleSaleSubmit);
     }
     elements.saleClientSelect?.addEventListener("change", handleSaleClientChange);
+    elements.salePlateSelect?.addEventListener("change", handleSalePlateChange);
     if (elements.tableBody) {
         elements.tableBody.addEventListener("click", (event) => {
             const button = event.target.closest("[data-action]");
