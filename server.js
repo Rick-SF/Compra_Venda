@@ -219,6 +219,10 @@ app.get("/index.html", (req, res) => {
     sendPage(res, "index.html");
 });
 
+app.get("/registrar-vendas.html", (req, res) => {
+    sendPage(res, "registrar-vendas.html");
+});
+
 app.get("/clientes.html", (req, res) => {
     sendPage(res, "clientes.html");
 });
