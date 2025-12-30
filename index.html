@@ -88,7 +88,7 @@
                         </label>
                         <label>
                             Chassi
-                            <input type="text" name="chassi" placeholder="Número completo sem espaços">
+                            <input type="text" name="chassi" placeholder="Número do Chassi">
                         </label>
                         <label>
                             Renavam
@@ -104,11 +104,11 @@
                         </label>
                         <label>
                             Valor da Compra (R$)
-                            <input type="number" name="valorCompra" min="0" step="0.01" required>
+                            <input type="text" name="valorCompra" required data-mask="currency" placeholder="R$1.000,00">
                         </label>
                         <label>
                             Custos Extras (R$)
-                            <input type="number" name="custosExtras" min="0" step="0.01" placeholder="IPVA, transferência, etc.">
+                            <input type="text" name="custosExtras" placeholder="IPVA, transferência, etc." data-mask="currency">
                         </label>
                         <label class="wide">
                             Observações

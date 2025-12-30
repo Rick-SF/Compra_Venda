@@ -32,6 +32,21 @@ const stripNonDigits = (value, limit) => {
 const normalizePlate = (value) =>
     value?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
 
+const currencyInputFormatter = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
+
+const formatCurrencyInput = (value) => {
+    if (typeof value === "number") {
+        return currencyInputFormatter.format(value);
+    }
+    const digits = stripNonDigits(value);
+    if (!digits) return "";
+    const number = Number(digits) / 100;
+    return currencyInputFormatter.format(number);
+};
+
 const formatPhoneDisplay = (value) => {
     const digits = stripNonDigits(value, 11);
     if (!digits) return "";
@@ -51,6 +66,15 @@ const maskHandlers = {
         if (!input || input.dataset.maskAttached === "true") return;
         const handle = () => {
             input.value = formatPhoneDisplay(input.value);
+        };
+        input.addEventListener("input", handle);
+        input.dataset.maskAttached = "true";
+        handle();
+    },
+    currency: (input) => {
+        if (!input || input.dataset.maskAttached === "true") return;
+        const handle = () => {
+            input.value = formatCurrencyInput(input.value);
         };
         input.addEventListener("input", handle);
         input.dataset.maskAttached = "true";
@@ -215,8 +239,8 @@ const clearFormDraftStorage = (key) => {
 
 const resetFormDraft = (form, key) => {
     if (!form) return;
-    form.reset();
     clearFormDraftStorage(key);
+    form.reset();
     if (form === elements.saleForm) {
         if (elements.saleClientSelect) {
             delete elements.saleClientSelect.dataset.pendingValue;
@@ -358,7 +382,7 @@ const populateSalePlateOptions = () => {
     if (!purchases.length) {
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Cadastre uma compra para selecionar";
+        option.textContent = "Cadastre uma placa";
         select.appendChild(option);
         select.disabled = true;
         if (previousValue) {
@@ -369,7 +393,7 @@ const populateSalePlateOptions = () => {
     select.disabled = false;
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "Selecione uma placa comprada";
+    placeholder.textContent = "Selecione uma placa";
     select.appendChild(placeholder);
     const seen = new Set();
     purchases.forEach((purchase) => {
@@ -430,7 +454,7 @@ const handleSalePlateChange = () => {
     if (valueCompraInput) {
         valueCompraInput.value =
             purchase.valorCompra !== undefined && purchase.valorCompra !== null
-                ? Number(purchase.valorCompra)
+                ? formatCurrencyInput(purchase.valorCompra)
                 : "";
     }
     saveFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
@@ -494,8 +518,8 @@ const purchaseModalFields = [
     { name: "renavan", label: "Renavam", type: "text" },
     { name: "codigoCRVe", label: "Código CRVe", type: "text" },
     { name: "codigoCLAe", label: "Código CLAe", type: "text" },
-    { name: "valorCompra", label: "Valor da Compra (R$)", type: "number", required: true },
-    { name: "custosExtras", label: "Custos Extras (R$)", type: "number" },
+    { name: "valorCompra", label: "Valor da Compra (R$)", type: "text", required: true, mask: "currency" },
+    { name: "custosExtras", label: "Custos Extras (R$)", type: "text", mask: "currency" },
     { name: "observacoes", label: "Observações", type: "textarea" },
 ];
 
@@ -515,10 +539,10 @@ const saleModalFields = [
     { name: "contato", label: "Contato", type: "text", mask: "phone" },
     { name: "modelo", label: "Modelo / Versão", type: "text", required: true },
     { name: "placa", label: "Placa", type: "text", required: true },
-    { name: "valorCompra", label: "Valor da Compra (R$)", type: "number" },
+    { name: "valorCompra", label: "Valor da Compra (R$)", type: "text", mask: "currency" },
     { name: "codigoATPVe", label: "Código ATPVe", type: "text" },
-    { name: "custosExtras", label: "Custos Extras (R$)", type: "number" },
-    { name: "valorVenda", label: "Valor da Venda (R$)", type: "number", required: true },
+    { name: "custosExtras", label: "Custos Extras (R$)", type: "text", mask: "currency" },
+    { name: "valorVenda", label: "Valor da Venda (R$)", type: "text", required: true, mask: "currency" },
     { name: "observacoes", label: "Observações", type: "textarea" },
 ];
 
@@ -531,6 +555,10 @@ const formatValueByMask = (mask, value) => {
     if (!mask) return value ?? "";
     if (mask === "phone") {
         return formatPhoneDisplay(value);
+    }
+    if (mask === "currency") {
+        if (value === null || value === undefined) return "";
+        return formatCurrencyInput(value);
     }
     return value ?? "";
 };
@@ -648,7 +676,17 @@ const normalizeISODate = (value) => {
     )}`;
 };
 
-const toNumber = (value) => Number(value) || 0;
+const toNumber = (value) => {
+    if (typeof value === "string") {
+        const cleaned = value
+            .replace(/\s/g, "")
+            .replace(/\./g, "")
+            .replace(",", ".")
+            .replace(/[^0-9.-]/g, "");
+        return Number(cleaned) || 0;
+    }
+    return Number(value) || 0;
+};
 const formatCurrency = (value) => currency.format(value || 0);
 const formatPercent = (value) => `${percentage.format(value || 0)}%`;
 const formatDate = (value) => {
@@ -794,6 +832,11 @@ const addTransaction = async (record) => {
             method: "POST",
             body: JSON.stringify(record),
         });
+        if (record.tipo === "Compra") {
+            resetFormDraft(elements.purchaseForm, FORM_DRAFT_KEYS.purchase);
+        } else if (record.tipo === "Venda") {
+            resetFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+        }
         state.transactions.unshift(saved);
         populateSalePlateOptions();
         renderTransactions();
@@ -889,7 +932,6 @@ const handlePurchaseSubmit = async (event) => {
         observacoes: data.get("observacoes")?.trim(),
     };
     await addTransaction(ensureVehicleFields(record));
-    resetFormDraft(event.currentTarget, FORM_DRAFT_KEYS.purchase);
 };
 
 const handleSaleSubmit = async (event) => {
@@ -949,7 +991,6 @@ const handleSaleSubmit = async (event) => {
         record.valorCompra = toNumber(purchaseReference.valorCompra);
     }
     await addTransaction(ensureVehicleFields(record));
-    resetFormDraft(event.currentTarget, FORM_DRAFT_KEYS.sale);
 };
 
 const startEditTransaction = (id) => {
