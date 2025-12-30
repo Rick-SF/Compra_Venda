@@ -203,8 +203,32 @@ app.delete("/api/clients/:id", (req, res) => {
     res.status(204).end();
 });
 
+const sendPage = (res, page) => {
+    res.sendFile(path.join(staticPath, page));
+};
+
+app.get("/", (req, res) => {
+    sendPage(res, "historico.html");
+});
+
+app.get("/historico.html", (req, res) => {
+    sendPage(res, "historico.html");
+});
+
+app.get("/index.html", (req, res) => {
+    sendPage(res, "index.html");
+});
+
+app.get("/clientes.html", (req, res) => {
+    sendPage(res, "clientes.html");
+});
+
+app.get("/login.html", (req, res) => {
+    sendPage(res, "login.html");
+});
+
 app.get("*", (req, res) => {
-    res.sendFile(path.join(staticPath, "index.html"));
+    sendPage(res, "historico.html");
 });
 
 app.listen(PORT, () => {

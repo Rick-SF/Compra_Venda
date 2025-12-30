@@ -39,7 +39,7 @@ const handleLoginSubmit = (event) => {
         window.auth?.login?.(username);
         showToast("Login realizado com sucesso.");
         setTimeout(() => {
-            window.location.href = "index.html";
+            window.location.href = "historico.html";
         }, 400);
     } else {
         showFeedback("Usuário ou senha inválidos.");

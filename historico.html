@@ -7,12 +7,24 @@
         <meta name="description" content="Consulta filtrada do histórico de compra e venda de veículos.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="style.css">
+        <script>
+            (function () {
+                try {
+                    const raw = localStorage.getItem("veiculos-auth-session");
+                    if (!raw) {
+                        window.location.replace("login.html");
+                    }
+                } catch {
+                    window.location.replace("login.html");
+                }
+            })();
+        </script>
     </head>
     <body>
         <div class="layout">
             <nav class="top-nav">
-                <a class="nav-link" href="index.html">Registrar operações</a>
                 <a class="nav-link active" href="historico.html">Histórico e filtros</a>
+                <a class="nav-link" href="index.html">Registrar operações</a>
                 <a class="nav-link" href="clientes.html">Clientes</a>
                 <button class="nav-link button-link" type="button" data-logout>Sair</button>
             </nav>
