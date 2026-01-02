@@ -121,11 +121,11 @@ body {
 }
 
 .clients-page .card.card-history {
-    width: min(1100px, 100%);
+    width: min(1600px, 100%);
 }
 
 .clients-page .card.card-history .table-wrapper {
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .clients-page .card.card-history table {
@@ -139,6 +139,10 @@ body {
     word-break: break-word;
     white-space: normal;
     overflow-wrap: anywhere;
+}
+
+.clients-page .card.card-history th {
+    text-align: center;
 }
 
 .clients-page .card.card-history td .notes {
@@ -520,6 +524,11 @@ tbody tr:hover {
     font-style: italic;
 }
 
+.clients-page .card.card-history .placeholder td {
+    text-align: center;
+    justify-content: center;
+}
+
 .tag {
     display: inline-flex;
     align-items: center;
@@ -672,6 +681,11 @@ tbody tr:hover {
     gap: 0.5rem;
     flex-wrap: wrap;
     min-width: 120px;
+}
+
+body[data-page="vendas"] .actions-cell {
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .table-button {

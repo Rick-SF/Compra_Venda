@@ -68,6 +68,18 @@
                         E-mail
                         <input type="email" name="email" placeholder="cliente@email.com">
                     </label>
+                    <label>
+                        Nacionalidade
+                        <input type="text" name="nacionalidade" placeholder="Brasileiro(a)">
+                    </label>
+                    <label>
+                        Estado civil
+                        <input type="text" name="estadoCivil" placeholder="Solteiro(a), casado(a)...">
+                    </label>
+                    <label>
+                        Profissão
+                        <input type="text" name="profissao" placeholder="Corretor, empresário...">
+                    </label>
                     <label class="wide">
                         Observações
                         <textarea name="observacoes" rows="2" placeholder="Detalhes relevantes do cliente"></textarea>
@@ -81,7 +93,7 @@
                 </form>
             </section>
 
-            <section class="card card-history">
+            <section class="card card-history clients-grid">
                 <div class="card-header">
                     <h2>Clientes cadastrados</h2>
                     <p>Utilize a tabela abaixo para consultar e remover cadastros quando necessário.</p>
@@ -95,6 +107,9 @@
                                 <th>RG</th>
                                 <th>CNH</th>
                                 <th>Endereço</th>
+                                <th>Nacionalidade</th>
+                                <th>Estado civil</th>
+                                <th>Profissão</th>
                                 <th>Contato</th>
                                 <th>E-mail</th>
                                 <th>Observações</th>
@@ -103,7 +118,7 @@
                         </thead>
                         <tbody id="clients-table">
                             <tr class="placeholder">
-                                <td colspan="9">Nenhum cliente cadastrado.</td>
+                                <td colspan="12">Nenhum cliente cadastrado.</td>
                             </tr>
                         </tbody>
                     </table>

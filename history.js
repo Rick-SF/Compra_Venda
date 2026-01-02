@@ -16,6 +16,7 @@ const state = {
         comprador: "",
         dataInicio: "",
         dataFim: "",
+        tipo: "",
     },
 };
 
@@ -25,11 +26,13 @@ const elements = {
     filterForm: document.getElementById("history-filter"),
     tableBody: document.getElementById("history-body"),
     clientFilterSelect: document.querySelector("[data-select='history-client']"),
+    plateFilterSelect: document.querySelector("[data-select='history-plate']"),
     summary: {
         invested: document.querySelector("[data-summary='invested']"),
         sold: document.querySelector("[data-summary='sold']"),
         profit: document.querySelector("[data-summary='profit']"),
         count: document.querySelector("[data-summary='count']"),
+        profitPercent: document.querySelector("[data-summary='profit-percent']"),
     },
     resultText: document.querySelector("[data-results-count]"),
     clearButton: document.getElementById("clear-filters"),
@@ -121,19 +124,19 @@ const calculateProfit = (record) => {
 };
 
 const applyFilters = () => {
-    const { modelo, placa, comprador, dataInicio, dataFim } = state.filters;
+    const { modelo, placa, comprador, dataInicio, dataFim, tipo } =
+        state.filters;
     const startValue = normalizeISODate(dataInicio);
     const endValue = normalizeISODate(dataFim);
+    const normalizedPlateFilter = normalizePlate(placa);
 
     return state.transactions.filter((record) => {
+        const matchType = tipo ? record.tipo === tipo : true;
         const matchModel = modelo
             ? (record.modelo || "").toLowerCase().includes(modelo)
             : true;
-        const matchPlate = placa
-            ? (record.placa || "")
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")
-                  .includes(placa)
+        const matchPlate = normalizedPlateFilter
+            ? normalizePlate(record.placa) === normalizedPlateFilter
             : true;
         const matchBuyer = comprador
             ? (record.parceiro || "").toLowerCase().includes(comprador)
@@ -144,7 +147,14 @@ const applyFilters = () => {
         }
         const matchStart = startValue ? recordDateValue >= startValue : true;
         const matchEnd = endValue ? recordDateValue <= endValue : true;
-        return matchModel && matchPlate && matchBuyer && matchStart && matchEnd;
+        return (
+            matchType &&
+            matchModel &&
+            matchPlate &&
+            matchBuyer &&
+            matchStart &&
+            matchEnd
+        );
     });
 };
 
@@ -289,11 +299,18 @@ const updateSummary = (records) => {
         },
         { invested: 0, sold: 0, profit: 0 }
     );
+    const profitPercent =
+        totals.invested > 0 ? (totals.profit / totals.invested) * 100 : 0;
 
     elements.summary.invested.textContent = formatCurrency(totals.invested);
     elements.summary.sold.textContent = formatCurrency(totals.sold);
     elements.summary.profit.textContent = formatCurrency(totals.profit);
     elements.summary.count.textContent = records.length.toString();
+    if (elements.summary.profitPercent) {
+        elements.summary.profitPercent.textContent = `${profitPercent.toFixed(
+            2
+        )}%`;
+    }
 };
 
 const updateResultText = (recordsLength) => {
@@ -316,6 +333,8 @@ const handleFilterInput = (event) => {
     if (!target?.name || !(target.name in state.filters)) return;
     if (target.name === "placa") {
         state.filters.placa = normalizePlate(target.value);
+    } else if (target.name === "tipo") {
+        state.filters.tipo = target.value;
     } else if (target.type === "date") {
         state.filters[target.name] = target.value;
     } else {
@@ -331,6 +350,7 @@ const clearFilters = () => {
         comprador: "",
         dataInicio: "",
         dataFim: "",
+        tipo: "",
     };
     if (elements.filterForm) {
         elements.filterForm.reset();
@@ -349,6 +369,7 @@ const handleTableClick = (event) => {
                 (item) => item.id !== id
             );
             persistTransactions();
+            populatePlateFilter();
             render();
             showToast("Operação excluída com sucesso.");
         });
@@ -372,12 +393,14 @@ const init = async () => {
         state.transactions = Array.isArray(data)
             ? data.map((entry) => ensureVehicleFields(entry))
             : [];
+        populatePlateFilter();
     } catch (error) {
         console.error(error);
         showToast("Erro ao carregar histórico.", "error");
     }
     if (elements.filterForm) {
         elements.filterForm.addEventListener("input", handleFilterInput);
+        elements.filterForm.addEventListener("change", handleFilterInput);
     }
     if (elements.clearButton) {
         elements.clearButton.addEventListener("click", clearFilters);
@@ -409,4 +432,32 @@ const populateClientFilter = () => {
         option.textContent = client.nome || "Cliente sem nome";
         select.appendChild(option);
     });
+};
+
+const populatePlateFilter = () => {
+    const select = elements.plateFilterSelect;
+    if (!select) return;
+    const currentValue = state.filters.placa || "";
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Todas as placas cadastradas";
+    select.appendChild(placeholder);
+
+    const plates = new Map();
+    state.transactions.forEach((record) => {
+        const normalized = normalizePlate(record.placa);
+        if (!normalized || plates.has(normalized)) return;
+        plates.set(normalized, record.placa || normalized);
+    });
+
+    plates.forEach((display, value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = display;
+        select.appendChild(option);
+    });
+
+    select.disabled = plates.size === 0;
+    select.value = plates.has(currentValue) ? currentValue : "";
 };

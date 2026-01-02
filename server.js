@@ -27,6 +27,9 @@ db.exec(`
         rg TEXT,
         cnh TEXT,
         endereco TEXT,
+        nacionalidade TEXT,
+        estadoCivil TEXT,
+        profissao TEXT,
         contato TEXT,
         email TEXT,
         observacoes TEXT,
@@ -71,6 +74,9 @@ const ensureColumn = (table, column, definition) => {
 };
 
 ensureColumn("clients", "observacoes", "TEXT");
+ensureColumn("clients", "nacionalidade", "TEXT");
+ensureColumn("clients", "estadoCivil", "TEXT");
+ensureColumn("clients", "profissao", "TEXT");
 
 app.use(cors());
 app.use(express.json());
@@ -167,9 +173,13 @@ app.post("/api/clients", (req, res) => {
     }
     const insert = db.prepare(`
         INSERT INTO clients (
-            id, nome, cpf, rg, cnh, endereco, contato, email, observacoes
+            id, nome, cpf, rg, cnh, endereco,
+            nacionalidade, estadoCivil, profissao,
+            contato, email, observacoes
         ) VALUES (
-            @id, @nome, @cpf, @rg, @cnh, @endereco, @contato, @email, @observacoes
+            @id, @nome, @cpf, @rg, @cnh, @endereco,
+            @nacionalidade, @estadoCivil, @profissao,
+            @contato, @email, @observacoes
         )
     `);
     insert.run(client);
@@ -186,6 +196,9 @@ app.put("/api/clients/:id", (req, res) => {
             rg=@rg,
             cnh=@cnh,
             endereco=@endereco,
+            nacionalidade=@nacionalidade,
+            estadoCivil=@estadoCivil,
+            profissao=@profissao,
             contato=@contato,
             email=@email,
             observacoes=@observacoes,

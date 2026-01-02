@@ -355,6 +355,7 @@ const populateSaleClientOptions = () => {
     if (shouldAutofill) {
         handleSaleClientChange();
     }
+    handleSalePlateChange();
 };
 
 const findPurchaseByPlate = (plateValue) => {
@@ -370,8 +371,7 @@ const findPurchaseByPlate = (plateValue) => {
 const populateSalePlateOptions = () => {
     const select = elements.salePlateSelect;
     if (!select) return;
-    const previousValue =
-        select.dataset.pendingValue || select.value || "";
+    const previousValue = select.dataset.pendingValue || select.value || "";
     select.innerHTML = "";
     const purchases = state.transactions.filter(
         (item) =>
@@ -382,7 +382,7 @@ const populateSalePlateOptions = () => {
     if (!purchases.length) {
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Cadastre uma placa";
+        option.textContent = "Cadastre uma compra para selecionar";
         select.appendChild(option);
         select.disabled = true;
         if (previousValue) {
@@ -393,7 +393,7 @@ const populateSalePlateOptions = () => {
     select.disabled = false;
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "Selecione uma placa";
+    placeholder.textContent = "Selecione uma placa comprada";
     select.appendChild(placeholder);
     const seen = new Set();
     purchases.forEach((purchase) => {
@@ -420,9 +420,13 @@ const populateSalePlateOptions = () => {
     } else {
         delete select.dataset.pendingValue;
     }
-    handleSalePlateChange();
-};
 
+    const shouldAutofill =
+        !elements.saleContactInput || !elements.saleContactInput.value;
+    if (shouldAutofill) {
+        handleSaleClientChange();
+    }
+};
 const handleSaleClientChange = () => {
     const select = elements.saleClientSelect;
     const contactInput = elements.saleContactInput;
@@ -691,7 +695,7 @@ const formatCurrency = (value) => currency.format(value || 0);
 const formatPercent = (value) => `${percentage.format(value || 0)}%`;
 const formatDate = (value) => {
     const isoDate = normalizeISODate(value);
-    if (!isoDate) return "—";
+    if (!isoDate) return "-";
     const [year, month, day] = isoDate.split("-");
     return `${day}/${month}/${year}`;
 };
@@ -701,6 +705,102 @@ const calculateProfit = (record) => {
     const cost = (record.valorCompra || 0) + (record.custosExtras || 0);
     return record.valorVenda - cost;
 };
+
+const getContactCellContent = (record) => {
+    const contactDisplay = formatPhoneDisplay(record.contato);
+    return `
+        ${record.parceiro || "-"}
+        ${
+            contactDisplay
+                ? `<span class="contact">${contactDisplay}</span>`
+                : ""
+        }
+    `.trim();
+};
+
+const columnRenderers = {
+    data: (record) => `<td>${formatDate(record.data)}</td>`,
+    tipo: (record) => {
+        const typeClass = record.tipo === "Venda" ? "tag-sale" : "tag-purchase";
+        return `<td><span class="tag ${typeClass}">${record.tipo}</span></td>`;
+    },
+    veiculo: (record) => `<td>${record.veiculo || "-"}</td>`,
+    marca: (record) => `<td>${record.marca || "-"}</td>`,
+    modelo: (record) => `<td>${record.modelo || "-"}</td>`,
+    cor: (record) => `<td>${record.cor || "-"}</td>`,
+    anoFabricacao: (record) => `<td>${record.anoFabricacao || "-"}</td>`,
+    anoModelo: (record) => `<td>${record.anoModelo || "-"}</td>`,
+    cidade: (record) => `<td>${record.cidade || "-"}</td>`,
+    uf: (record) => `<td>${record.uf || "-"}</td>`,
+    placa: (record) => `<td>${record.placa || "-"}</td>`,
+    contraparte: (record) => `<td>${getContactCellContent(record)}</td>`,
+    chassi: (record) => `<td>${record.chassi || "-"}</td>`,
+    renavam: (record) => `<td>${record.renavan || "-"}</td>`,
+    codigoCRVe: (record) => `<td>${record.codigoCRVe || "-"}</td>`,
+    codigoCLAe: (record) => `<td>${record.codigoCLAe || "-"}</td>`,
+    codigoATPVe: (record) => `<td>${record.codigoATPVe || "-"}</td>`,
+    valorCompra: (record) =>
+        `<td>${record.valorCompra ? formatCurrency(record.valorCompra) : "-"}</td>`,
+    valorVenda: (record) =>
+        `<td>${record.valorVenda ? formatCurrency(record.valorVenda) : "-"}</td>`,
+    observacoes: (record) =>
+        `<td><span class="notes">${record.observacoes || "-"}</span></td>`,
+    actions: (record) => `
+        <td class="actions-cell">
+            <button class="table-button edit" data-action="edit" data-id="${record.id}">
+                Editar
+            </button>
+            <button class="table-button delete" data-action="delete" data-id="${record.id}">
+                Excluir
+            </button>
+        </td>
+    `,
+};
+
+const TABLE_COLUMNS = {
+    compras: [
+        "data",
+        "tipo",
+        "veiculo",
+        "marca",
+        "modelo",
+        "cor",
+        "anoFabricacao",
+        "anoModelo",
+        "cidade",
+        "uf",
+        "placa",
+        "contraparte",
+        "chassi",
+        "renavam",
+        "codigoCRVe",
+        "codigoCLAe",
+        "valorCompra",
+        "observacoes",
+        "actions",
+    ],
+    vendas: [
+        "data",
+        "tipo",
+        "veiculo",
+        "marca",
+        "modelo",
+        "cor",
+        "anoFabricacao",
+        "anoModelo",
+        "cidade",
+        "uf",
+        "placa",
+        "contraparte",
+        "codigoATPVe",
+        "valorVenda",
+        "observacoes",
+        "actions",
+    ],
+};
+
+const getActiveColumns = () =>
+    TABLE_COLUMNS[pageContext] || TABLE_COLUMNS.compras;
 
 const openOperationModal = (record) => {
     if (!operationModal.container || !operationModal.form) return;
@@ -1012,10 +1112,11 @@ const renderTransactions = () => {
     tbody.innerHTML = "";
 
     const visibleRecords = filterTransactionsForPage(state.transactions);
+    const columns = getActiveColumns();
+    const placeholderCols = columns.length;
 
     if (!visibleRecords.length) {
-        tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="22">Nenhuma operação cadastrada ainda.</td></tr>';
+        tbody.innerHTML = `<tr class="placeholder"><td colspan="${placeholderCols}">Nenhuma operação cadastrada ainda.</td></tr>`;
         return;
     }
 
@@ -1025,64 +1126,9 @@ const renderTransactions = () => {
             tr.title = record.observacoes;
         }
 
-        const lucro = calculateProfit(record);
-        const typeClass = record.tipo === "Venda" ? "tag-sale" : "tag-purchase";
-        const profitClass =
-            typeof lucro === "number"
-                ? lucro >= 0
-                    ? "profit-positive"
-                    : "profit-negative"
-                : "";
-
-        const contactDisplay = formatPhoneDisplay(record.contato);
-        tr.innerHTML = `
-            <td>${formatDate(record.data)}</td>
-            <td><span class="tag ${typeClass}">${record.tipo}</span></td>
-            <td>${record.veiculo || "—"}</td>
-            <td>${record.marca || "—"}</td>
-            <td>${record.modelo || "—"}</td>
-            <td>${record.cor || "—"}</td>
-            <td>${record.anoFabricacao || "—"}</td>
-            <td>${record.anoModelo || "—"}</td>
-            <td>${record.cidade || "—"}</td>
-            <td>${record.uf || "—"}</td>
-            <td>${record.placa || "—"}</td>
-            <td>
-                ${record.parceiro || "—"}
-                ${
-                    contactDisplay
-                        ? `<span class="contact">${contactDisplay}</span>`
-                        : ""
-                }
-            </td>
-            <td>${record.chassi || "—"}</td>
-            <td>${record.renavan || "—"}</td>
-            <td>${record.codigoCRVe || "—"}</td>
-            <td>${record.codigoCLAe || "—"}</td>
-            <td>${record.codigoATPVe || "—"}</td>
-            <td>${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}</td>
-            <td>${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}</td>
-            <td>
-                <span class="profit ${profitClass}">
-                    ${
-                        typeof lucro === "number"
-                            ? formatCurrency(lucro)
-                            : "—"
-                    }
-                </span>
-            </td>
-            <td>
-                <span class="notes">${record.observacoes || "—"}</span>
-            </td>
-            <td class="actions-cell">
-                <button class="table-button edit" data-action="edit" data-id="${record.id}">
-                    Editar
-                </button>
-                <button class="table-button delete" data-action="delete" data-id="${record.id}">
-                    Excluir
-                </button>
-            </td>
-        `;
+        tr.innerHTML = columns
+            .map((key) => columnRenderers[key]?.(record) || "<td>—</td>")
+            .join("");
 
         tbody.appendChild(tr);
     });
@@ -1109,10 +1155,18 @@ const updateSummary = () => {
     const profitPercent =
         totals.invested > 0 ? (totals.profit / totals.invested) * 100 : 0;
 
-    elements.summary.invested.textContent = formatCurrency(totals.invested);
-    elements.summary.sold.textContent = formatCurrency(totals.sold);
-    elements.summary.profit.textContent = formatCurrency(totals.profit);
-    elements.summary.count.textContent = state.transactions.length.toString();
+    if (elements.summary.invested) {
+        elements.summary.invested.textContent = formatCurrency(totals.invested);
+    }
+    if (elements.summary.sold) {
+        elements.summary.sold.textContent = formatCurrency(totals.sold);
+    }
+    if (elements.summary.profit) {
+        elements.summary.profit.textContent = formatCurrency(totals.profit);
+    }
+    if (elements.summary.count) {
+        elements.summary.count.textContent = state.transactions.length.toString();
+    }
     if (elements.summary.profitPercent) {
         elements.summary.profitPercent.textContent = formatPercent(profitPercent);
     }

@@ -208,6 +208,9 @@ const parseClientFormData = (formData) => ({
     rg: trimValue(formData.get("rg")),
     cnh: trimValue(formData.get("cnh")),
     endereco: trimValue(formData.get("endereco")),
+    nacionalidade: trimValue(formData.get("nacionalidade")),
+    estadoCivil: trimValue(formData.get("estadoCivil")),
+    profissao: trimValue(formData.get("profissao")),
     contato: stripNonDigits(formData.get("contato"), 11),
     email: trimValue(formData.get("email")),
     observacoes: trimValue(formData.get("observacoes")),
@@ -229,6 +232,9 @@ const clientModalFields = [
     { name: "rg", label: "RG", type: "text" },
     { name: "cnh", label: "CNH", type: "text" },
     { name: "endereco", label: "Endereço", type: "text", wide: true },
+    { name: "nacionalidade", label: "Nacionalidade", type: "text" },
+    { name: "estadoCivil", label: "Estado civil", type: "text" },
+    { name: "profissao", label: "Profissão", type: "text" },
     { name: "contato", label: "Contato", type: "text", required: true, mask: "phone" },
     { name: "email", label: "E-mail", type: "email" },
     { name: "observacoes", label: "Observações", type: "textarea" },
@@ -290,13 +296,13 @@ const renderClients = () => {
 
     if (stateClients.loading) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="9">Carregando clientes...</td></tr>';
+            '<tr class="placeholder"><td colspan="12">Carregando clientes...</td></tr>';
         return;
     }
 
     if (!stateClients.clients.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="9">Nenhum cliente cadastrado.</td></tr>';
+            '<tr class="placeholder"><td colspan="12">Nenhum cliente cadastrado.</td></tr>';
         return;
     }
 
@@ -308,6 +314,9 @@ const renderClients = () => {
             <td>${displayClientValue(client.rg)}</td>
             <td>${displayClientValue(client.cnh)}</td>
             <td>${displayClientValue(client.endereco)}</td>
+            <td>${displayClientValue(client.nacionalidade)}</td>
+            <td>${displayClientValue(client.estadoCivil)}</td>
+            <td>${displayClientValue(client.profissao)}</td>
             <td>${displayClientValue(formatPhoneDisplay(client.contato))}</td>
             <td>${displayClientValue(client.email)}</td>
             <td><span class="notes">${displayClientValue(client.observacoes)}</span></td>
