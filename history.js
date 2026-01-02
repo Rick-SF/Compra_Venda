@@ -117,10 +117,38 @@ const formatDate = (value) => {
     return `${day}/${month}/${year}`;
 };
 
+const findPurchaseForRecord = (record) => {
+    if (!record?.placa) return null;
+    const normalized = normalizePlate(record.placa);
+    return state.transactions.find(
+        (item) =>
+            item.tipo === "Compra" &&
+            normalizePlate(item.placa) === normalized
+    );
+};
+
+const getPurchaseExtras = (record) => {
+    if (record.tipo === "Compra") {
+        return record.custosExtras || 0;
+    }
+    const purchase = findPurchaseForRecord(record);
+    return purchase ? purchase.custosExtras || 0 : 0;
+};
+
+const getSaleExtras = (record) =>
+    record.tipo === "Venda" ? record.custosExtras || 0 : 0;
+
 const calculateProfit = (record) => {
     if (record.tipo !== "Venda") return null;
-    const cost = (record.valorCompra || 0) + (record.custosExtras || 0);
-    return record.valorVenda - cost;
+    const purchase = findPurchaseForRecord(record);
+    const purchaseValue = purchase
+        ? purchase.valorCompra || record.valorCompra || 0
+        : record.valorCompra || 0;
+    const purchaseExtras = getPurchaseExtras(record);
+    const saleExtras = getSaleExtras(record);
+    const revenue = (record.valorVenda || 0) + saleExtras;
+    const cost = purchaseValue + purchaseExtras;
+    return revenue - cost;
 };
 
 const applyFilters = () => {
@@ -156,6 +184,11 @@ const applyFilters = () => {
             matchEnd
         );
     });
+};
+
+const renderCostCell = (label, amount) => {
+    if (!amount) return "";
+    return `<span class="muted-text">${label}: ${formatCurrency(amount)}</span>`;
 };
 
 const renderTable = (records) => {
@@ -208,8 +241,18 @@ const renderTable = (records) => {
             <td>${record.codigoCRVe || "—"}</td>
             <td>${record.codigoCLAe || "—"}</td>
             <td>${record.codigoATPVe || "—"}</td>
-            <td>${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}</td>
-            <td>${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}</td>
+            <td>
+                ${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}
+                ${renderCostCell("Custos extras", getPurchaseExtras(record))}
+            </td>
+            <td>
+                ${record.valorVenda ? formatCurrency(record.valorVenda) : "—"}
+                ${
+                    record.tipo === "Venda"
+                        ? renderCostCell("Custos extras", getSaleExtras(record))
+                        : ""
+                }
+            </td>
             <td>
                 <span class="profit ${profitClass}">
                     ${
@@ -253,8 +296,14 @@ const closeConfirm = () => {
     confirmCallback = null;
 };
 
-elements.confirmModal?.confirmBtn?.addEventListener("click", () => {
-    if (confirmCallback) confirmCallback();
+elements.confirmModal?.confirmBtn?.addEventListener("click", async () => {
+    if (confirmCallback) {
+        try {
+            await confirmCallback();
+        } catch (error) {
+            console.error(error);
+        }
+    }
     closeConfirm();
 });
 elements.confirmModal?.cancelBtn?.addEventListener("click", closeConfirm);
@@ -289,22 +338,26 @@ const updateSummary = (records) => {
     const totals = records.reduce(
         (acc, record) => {
             if (record.tipo === "Compra") {
-                acc.invested += record.valorCompra || 0;
+                acc.invested +=
+                    (record.valorCompra || 0) + (getPurchaseExtras(record) || 0);
             }
             if (record.tipo === "Venda") {
-                acc.sold += record.valorVenda || 0;
-                acc.profit += calculateProfit(record) || 0;
+                acc.sold +=
+                    (record.valorVenda || 0) + (getSaleExtras(record) || 0);
             }
             return acc;
         },
-        { invested: 0, sold: 0, profit: 0 }
+        { invested: 0, sold: 0 }
     );
+    const totalProfit = totals.sold - totals.invested;
     const profitPercent =
-        totals.invested > 0 ? (totals.profit / totals.invested) * 100 : 0;
+        totals.invested > 0 ? (totalProfit / totals.invested) * 100 : 0;
 
     elements.summary.invested.textContent = formatCurrency(totals.invested);
     elements.summary.sold.textContent = formatCurrency(totals.sold);
-    elements.summary.profit.textContent = formatCurrency(totals.profit);
+    if (elements.summary.profit) {
+        elements.summary.profit.textContent = formatCurrency(totalProfit);
+    }
     elements.summary.count.textContent = records.length.toString();
     if (elements.summary.profitPercent) {
         elements.summary.profitPercent.textContent = `${profitPercent.toFixed(
@@ -364,14 +417,19 @@ const handleTableClick = (event) => {
     const { id, action } = button.dataset;
     if (!id) return;
     if (action === "delete") {
-        openConfirm("Deseja remover este registro? Essa ação não pode ser desfeita.", () => {
-            state.transactions = state.transactions.filter(
-                (item) => item.id !== id
-            );
-            persistTransactions();
-            populatePlateFilter();
-            render();
-            showToast("Operação excluída com sucesso.");
+        openConfirm("Deseja remover este registro? Essa ação não pode ser desfeita.", async () => {
+            try {
+                await jsonRequest(`${API_OPERATIONS}/${id}`, { method: "DELETE" });
+                state.transactions = state.transactions.filter(
+                    (item) => item.id !== id
+                );
+                populatePlateFilter();
+                render();
+                showToast("Operação excluída com sucesso.");
+            } catch (error) {
+                console.error(error);
+                showToast("Erro ao excluir operação.", "error");
+            }
         });
     } else if (action === "edit") {
         localStorage.setItem(PENDING_EDIT_KEY, id);

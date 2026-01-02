@@ -700,10 +700,28 @@ const formatDate = (value) => {
     return `${day}/${month}/${year}`;
 };
 
+const getPurchaseExtrasForRecord = (record) => {
+    if (record.tipo === "Compra") {
+        return record.custosExtras || 0;
+    }
+    const purchase = findPurchaseByPlate(record.placa);
+    return purchase ? purchase.custosExtras || 0 : 0;
+};
+
+const getSaleExtrasForRecord = (record) =>
+    record.tipo === "Venda" ? record.custosExtras || 0 : 0;
+
 const calculateProfit = (record) => {
     if (record.tipo !== "Venda") return null;
-    const cost = (record.valorCompra || 0) + (record.custosExtras || 0);
-    return record.valorVenda - cost;
+    const saleExtras = getSaleExtrasForRecord(record);
+    const purchaseExtras = getPurchaseExtrasForRecord(record);
+    const purchase = findPurchaseByPlate(record.placa);
+    const purchaseValue = purchase
+        ? purchase.valorCompra || record.valorCompra || 0
+        : record.valorCompra || 0;
+    const revenue = (record.valorVenda || 0) + saleExtras;
+    const cost = purchaseValue + purchaseExtras;
+    return revenue - cost;
 };
 
 const getContactCellContent = (record) => {
@@ -739,10 +757,23 @@ const columnRenderers = {
     codigoCRVe: (record) => `<td>${record.codigoCRVe || "-"}</td>`,
     codigoCLAe: (record) => `<td>${record.codigoCLAe || "-"}</td>`,
     codigoATPVe: (record) => `<td>${record.codigoATPVe || "-"}</td>`,
-    valorCompra: (record) =>
-        `<td>${record.valorCompra ? formatCurrency(record.valorCompra) : "-"}</td>`,
-    valorVenda: (record) =>
-        `<td>${record.valorVenda ? formatCurrency(record.valorVenda) : "-"}</td>`,
+    valorCompra: (record) => {
+        const value = record.valorCompra ? formatCurrency(record.valorCompra) : "-";
+        const extras = getPurchaseExtrasForRecord(record);
+        const extrasText = extras
+            ? `<span class="muted-text">Custos extras: ${formatCurrency(extras)}</span>`
+            : "";
+        return `<td>${value}${extrasText ? `<br>${extrasText}` : ""}</td>`;
+    },
+    valorVenda: (record) => {
+        const value = record.valorVenda ? formatCurrency(record.valorVenda) : "-";
+        const extras = getSaleExtrasForRecord(record);
+        const extrasText =
+            record.tipo === "Venda" && extras
+                ? `<span class="muted-text">Custos extras: ${formatCurrency(extras)}</span>`
+                : "";
+        return `<td>${value}${extrasText ? `<br>${extrasText}` : ""}</td>`;
+    },
     observacoes: (record) =>
         `<td><span class="notes">${record.observacoes || "-"}</span></td>`,
     actions: (record) => `
@@ -1138,22 +1169,25 @@ const updateSummary = () => {
     const totals = state.transactions.reduce(
         (acc, record) => {
             if (record.tipo === "Compra") {
-                acc.invested += record.valorCompra || 0;
+                acc.invested +=
+                    (record.valorCompra || 0) +
+                    (getPurchaseExtrasForRecord(record) || 0);
             }
             if (record.tipo === "Venda") {
-                acc.sold += record.valorVenda || 0;
-                acc.profit += calculateProfit(record) || 0;
+                acc.sold +=
+                    (record.valorVenda || 0) +
+                    (getSaleExtrasForRecord(record) || 0);
             }
             return acc;
         },
         {
             invested: 0,
             sold: 0,
-            profit: 0,
         }
     );
+    const totalProfit = totals.sold - totals.invested;
     const profitPercent =
-        totals.invested > 0 ? (totals.profit / totals.invested) * 100 : 0;
+        totals.invested > 0 ? (totalProfit / totals.invested) * 100 : 0;
 
     if (elements.summary.invested) {
         elements.summary.invested.textContent = formatCurrency(totals.invested);
@@ -1162,7 +1196,7 @@ const updateSummary = () => {
         elements.summary.sold.textContent = formatCurrency(totals.sold);
     }
     if (elements.summary.profit) {
-        elements.summary.profit.textContent = formatCurrency(totals.profit);
+        elements.summary.profit.textContent = formatCurrency(totalProfit);
     }
     if (elements.summary.count) {
         elements.summary.count.textContent = state.transactions.length.toString();
