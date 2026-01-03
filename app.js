@@ -382,7 +382,7 @@ const populateSalePlateOptions = () => {
     if (!purchases.length) {
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Cadastre uma compra para selecionar";
+        option.textContent = "Cadastre uma compra";
         select.appendChild(option);
         select.disabled = true;
         if (previousValue) {

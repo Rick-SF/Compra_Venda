@@ -454,6 +454,15 @@ const handleClientSubmit = async (event) => {
         id: generateClientId(),
         ...parseClientFormData(data),
     };
+    if (
+        payload.cpf &&
+        stateClients.clients.some(
+            (client) => client.cpf && client.cpf === payload.cpf
+        )
+    ) {
+        showClientToast("Já existe um cliente cadastrado com este CPF.", "error");
+        return;
+    }
     try {
         const created = await jsonRequest(API_CLIENTS, {
             method: "POST",
