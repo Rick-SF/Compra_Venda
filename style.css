@@ -175,6 +175,28 @@ body {
     flex: 0 0 220px;
 }
 
+.contract-page .contract-preview .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.contract-page .contract-preview h3 {
+    margin-bottom: 0.35rem;
+}
+
+.contract-page .contract-preview ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.contract-page .contract-preview li {
+    margin-bottom: 0.35rem;
+}
+
 
 .card-header h2 {
     margin: 0 0 0.25rem 0;

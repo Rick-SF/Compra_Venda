@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Gerar Contratos - Compra e Venda de Veículos</title>
+        <meta name="description" content="Selecione uma venda e gere automaticamente o contrato em formato DOC.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="style.css">
+        <script>
+            (function () {
+                try {
+                    const raw = localStorage.getItem("veiculos-auth-session");
+                    if (!raw) {
+                        window.location.replace("login.html");
+                    }
+                } catch {
+                    window.location.replace("login.html");
+                }
+            })();
+        </script>
+    </head>
+    <body data-page="contrato">
+        <div class="layout contract-page">
+            <nav class="top-nav">
+                <a class="nav-link" href="historico.html">Histórico e filtros</a>
+                <a class="nav-link" href="clientes.html">Clientes</a>
+                <a class="nav-link" href="index.html">Compras</a>
+                <a class="nav-link" href="registrar-vendas.html">Vendas</a>
+                <a class="nav-link active" href="contrato.html">Contrato</a>
+                <button class="nav-link button-link" type="button" data-logout>Sair</button>
+            </nav>
+
+            <header class="page-header">
+                <h1>Formulário de Contrato</h1>
+                <p class="lead">
+                    O formulário será preenchido automaticamente com os dados da venda e cliente após seleção.
+                </p>
+            </header>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Selecione as informações</h2>
+                    <p>Escolha uma venda registrada e o comprador correspondente para gerar o documento.</p>
+                </div>
+                <form id="contract-form" class="form-grid">
+                    <label>
+                        Venda (placa / modelo / valor)
+                        <select name="operationId" id="contract-operation" required>
+                            <option value="">Carregando vendas...</option>
+                        </select>
+                    </label>
+                    <label>
+                        Cliente
+                        <select name="clientId" id="contract-client" required>
+                            <option value="">Carregando clientes...</option>
+                        </select>
+                    </label>
+                    <div class="form-actions">
+                        <button type="submit">Gerar contrato</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card card-history contract-preview" id="contract-preview">
+                <div class="card-header">
+                    <h2>Pré-visualização dos dados</h2>
+                    <p>Confirme se as informações abaixo estão corretas antes de gerar o documento.</p>
+                </div>
+                <div class="preview-grid" id="preview-content">
+                    <p>Selecione uma venda e um cliente para visualizar os detalhes.</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="toast" id="toast" aria-live="polite"></div>
+
+        <script src="auth.js" defer></script>
+        <script src="contrato.js" defer></script>
+    </body>
+</html>

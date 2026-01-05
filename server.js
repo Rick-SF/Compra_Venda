@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const Database = require("better-sqlite3");
+const PDFDocument = require("pdfkit");
 
 dotenv.config();
 
@@ -90,6 +91,34 @@ const mapOperationRow = (row) => ({
     valorVenda: row.valorVenda ?? 0,
     custosExtras: row.custosExtras ?? 0,
 });
+
+const formatCurrencyBR = (value) =>
+    new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    }).format(value || 0);
+
+const formatDateBR = (value) => {
+    if (!value) return "-";
+    const asDate = new Date(value);
+    if (!Number.isNaN(asDate.getTime())) {
+        return asDate.toLocaleDateString("pt-BR");
+    }
+    if (value.includes("-")) {
+        const [year, month, day] = value.split("-");
+        if (year && month && day) {
+            return `${day}/${month}/${year}`;
+        }
+    }
+    return value;
+};
+
+const SELLER_INFO = {
+    name: process.env.SELLER_NAME || "Revenda de Veículos",
+    document: process.env.SELLER_DOCUMENT || "Documento não informado",
+    address: process.env.SELLER_ADDRESS || "Endereço não informado",
+    city: process.env.SELLER_CITY || "",
+};
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -214,6 +243,117 @@ app.delete("/api/clients/:id", (req, res) => {
     const { id } = req.params;
     db.prepare("DELETE FROM clients WHERE id = ?").run(id);
     res.status(204).end();
+});
+
+app.post("/api/contracts/generate", (req, res) => {
+    try {
+        const { operationId, clientId } = req.body || {};
+        if (!operationId || !clientId) {
+            return res
+                .status(400)
+                .json({ message: "Venda e cliente são obrigatórios." });
+        }
+        const operation = db
+            .prepare("SELECT * FROM operations WHERE id = ? AND tipo = 'Venda'")
+            .get(operationId);
+        if (!operation) {
+            return res.status(404).json({ message: "Venda não encontrada." });
+        }
+        const client = db.prepare("SELECT * FROM clients WHERE id = ?").get(clientId);
+        if (!client) {
+            return res.status(404).json({ message: "Cliente não encontrado." });
+        }
+
+        const vehicleYears = [operation.anoModelo, operation.anoFabricacao]
+            .filter(Boolean)
+            .join(" / ");
+
+        const doc = new PDFDocument({ size: "A4", margin: 50 });
+        const filename = `contrato-${operation.placa || "venda"}.pdf`.replace(
+            /\s+/g,
+            "-"
+        );
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        doc.pipe(res);
+
+        doc.fontSize(18).text("Contrato de Compra e Venda de Veículo", {
+            align: "center",
+        });
+        doc.moveDown();
+        doc.fontSize(12).text(
+            `Em ${formatDateBR(new Date().toISOString())}, as partes abaixo qualificadas firmam o presente contrato.`
+        );
+
+        const section = (title) => {
+            doc.moveDown();
+            doc.fontSize(14).text(title, { underline: true });
+            doc.moveDown(0.3);
+            doc.fontSize(12);
+        };
+
+        section("Vendedor");
+        doc.text(`Nome: ${SELLER_INFO.name}`);
+        doc.text(`Documento: ${SELLER_INFO.document}`);
+        doc.text(`Endereço: ${SELLER_INFO.address}`);
+        if (SELLER_INFO.city) {
+            doc.text(`Cidade: ${SELLER_INFO.city}`);
+        }
+
+        section("Comprador");
+        doc.text(`Nome: ${client.nome || "-"}`);
+        doc.text(`CPF: ${client.cpf || "-"}`);
+        doc.text(`RG: ${client.rg || "-"}`);
+        doc.text(`CNH: ${client.cnh || "-"}`);
+        doc.text(`Endereço: ${client.endereco || "-"}`);
+
+        section("Veículo");
+        doc.text(`Placa: ${operation.placa || "-"}`);
+        doc.text(`Modelo: ${operation.modelo || operation.veiculo || "-"}`);
+        doc.text(`Ano: ${vehicleYears || "-"}`);
+        doc.text(`Cor: ${operation.cor || "-"}`);
+        doc.text(`Chassi: ${operation.chassi || "-"}`);
+        doc.text(`Renavam: ${operation.renavan || "-"}`);
+
+        section("Valores");
+        doc.text(
+            `Valor da venda: ${formatCurrencyBR(operation.valorVenda || 0)}`
+        );
+        doc.text(
+            `Custos extras (venda): ${formatCurrencyBR(
+                operation.custosExtras || 0
+            )}`
+        );
+        doc.text(
+            `Valor investido na compra: ${formatCurrencyBR(
+                operation.valorCompra || 0
+            )}`
+        );
+        doc.text(`Observações importantes: ${operation.observacoes || "-"}`);
+
+        doc.moveDown();
+        doc.text(
+            "O comprador declara ter vistoriado o veículo e aceita o estado em que se encontra, responsabilizando-se pelos custos e procedimentos de transferência."
+        );
+        doc.moveDown();
+        doc.text(
+            "Assinam as partes em duas vias de igual teor e forma, comprometendo-se com as cláusulas estabelecidas."
+        );
+
+        doc.moveDown(4);
+        doc.text("______________________________", { align: "center" });
+        doc.text("Vendedor", { align: "center" });
+        doc.moveDown(2);
+        doc.text("______________________________", { align: "center" });
+        doc.text("Comprador", { align: "center" });
+
+        doc.end();
+    } catch (error) {
+        console.error(error);
+        if (!res.headersSent) {
+            res.status(500).json({ message: "Erro ao gerar contrato." });
+        }
+    }
 });
 
 const sendPage = (res, page) => {
