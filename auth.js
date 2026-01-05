@@ -151,4 +151,27 @@ const attachLogoutHandlers = () => {
 
 document.addEventListener("DOMContentLoaded", attachLogoutHandlers);
 
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
+let inactivityTimer;
+
+const resetInactivityTimer = () => {
+    if (window.location.pathname.endsWith("login.html")) return;
+    if (!auth.isAuthenticated()) return;
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        alert("Sessão encerrada após 10 minutos de inatividade.");
+        auth.logout();
+    }, INACTIVITY_LIMIT_MS);
+};
+
+const setupInactivityWatcher = () => {
+    if (window.location.pathname.endsWith("login.html")) return;
+    ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((event) =>
+        document.addEventListener(event, resetInactivityTimer, { passive: true })
+    );
+    resetInactivityTimer();
+};
+
+document.addEventListener("DOMContentLoaded", setupInactivityWatcher);
+
 window.auth = auth;
