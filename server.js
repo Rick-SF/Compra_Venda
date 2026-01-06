@@ -487,7 +487,13 @@ app.post("/api/contracts/generate", (req, res) => {
         }
         const paymentClause =
             paymentType === "parcelado"
-                ? `em ${installments} parcela(s) mensal(is), igual(is) e sucessiva(s) de ${formatCurrencyBR(
+                ? `${
+                      entryValue > 0
+                          ? `com um valor de entrada equivalente a ${formatCurrencyBR(
+                                entryValue
+                            )}, e `
+                          : ""
+                  }em ${installments} parcela(s) mensal(is), igual(is) e sucessiva(s) de ${formatCurrencyBR(
                       installmentValue
                   )} (${numberToCurrencyWords(
                       installmentValue
