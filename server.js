@@ -4,7 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const Database = require("better-sqlite3");
-const JSZip = require("jszip");
+const PizZip = require("pizzip");
+const Docxtemplater = require("docxtemplater");
 
 dotenv.config();
 
@@ -124,15 +125,6 @@ const CONTRACT_TEMPLATE_PATH = path.join(
     "logo e doc",
     "Contrato de compra venda.docx"
 );
-
-const escapeXml = (value = "") =>
-    value
-        .toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -259,7 +251,7 @@ app.delete("/api/clients/:id", (req, res) => {
     res.status(204).end();
 });
 
-app.post("/api/contracts/generate", async (req, res) => {
+app.post("/api/contracts/generate", (req, res) => {
     try {
         const { operationId, clientId } = req.body || {};
         if (!operationId || !clientId) {
@@ -278,43 +270,56 @@ app.post("/api/contracts/generate", async (req, res) => {
             return res.status(404).json({ message: "Cliente não encontrado." });
         }
 
-        let templateBuffer;
+        let templateBinary;
         try {
-            templateBuffer = fs.readFileSync(CONTRACT_TEMPLATE_PATH);
+            templateBinary = fs.readFileSync(CONTRACT_TEMPLATE_PATH, "binary");
         } catch {
             return res
                 .status(500)
                 .json({ message: "Arquivo de contrato base não encontrado." });
         }
 
-        const replacements = {
+        let doc;
+        try {
+            const zip = new PizZip(templateBinary);
+            doc = new Docxtemplater(zip, {
+                paragraphLoop: true,
+                linebreaks: true,
+                delimiters: { start: "{", end: "}" },
+            });
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(500)
+                .json({ message: "Não foi possível carregar o contrato base." });
+        }
+
+        doc.setData({
             nome_comprador: client.nome || "",
             nacionalidade_comprador: client.nacionalidade || "",
             estado_civil_comprador: client.estadoCivil || "",
             profissao_comprador: client.profissao || "",
+            "profissão_comprador": client.profissao || "",
             cpf_comprador: client.cpf || "",
             rg_comprador: client.rg || "",
             cnh_comprador: client.cnh || "",
             endereco_comprador: client.endereco || "",
+            "endereço_comprador": client.endereco || "",
             contato_comprador: client.contato || "",
             email_comprador: client.email || "",
             observacoes_comprador: client.observacoes || "",
-        };
+        });
 
-        const zip = await JSZip.loadAsync(templateBuffer);
-        const documentFile = zip.file("word/document.xml");
-        if (!documentFile) {
+        try {
+            doc.render();
+        } catch (error) {
+            console.error(error);
             return res
                 .status(500)
-                .json({ message: "Estrutura do contrato base inválida." });
+                .json({ message: "Erro ao preencher o contrato." });
         }
-        let documentXml = await documentFile.async("string");
-        Object.entries(replacements).forEach(([key, value]) => {
-            const regex = new RegExp(`\\{${key}\\}`, "g");
-            documentXml = documentXml.replace(regex, escapeXml(value || ""));
-        });
-        zip.file("word/document.xml", documentXml);
-        const buffer = await zip.generateAsync({ type: "nodebuffer" });
+
+        const buffer = doc.getZip().generate({ type: "nodebuffer" });
         const filename = `contrato-${operation.placa || "venda"}.docx`.replace(
             /\s+/g,
             "-"

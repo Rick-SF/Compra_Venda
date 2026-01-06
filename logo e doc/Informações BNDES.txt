@@ -1,0 +1,43 @@
+Bom dia! Meu nome é Ramon, faço parte do suporte da RIX Telecom.
+Verifiquei no sistema que algumas escolas de Juruti estão sem conexão. Poderia verificar por gentileza?
+Segue a lista:
+15577074 - E M E I F ROSA DE SAROM (Ativo no Zabbix - INEP não aparece na OPNsense - Desconectados na Controladora) - Esperando resposta do Bruno
+
+
+
+
+
+Bom dia! Meu nome é Ramon, faço parte do suporte da RIX Telecom.
+Verifiquei no sistema que algumas escolas de João Pessoa estão sem conexão. Poderia verificar por gentileza?
+Segue a lista:
+25132881 - EM ANTONIA LUCIA NAVARRO BRAGA (Ativo no Zabbix - INEP não aparece na OPNsense - Desconectados na Controladora)
+25129058 - CMEI MARIA EMILIA COELHO DA SILVA CORREIA (Ativo no Zabbix - INEP não aparece na OPNsense - Desconectados na Controladora) - Sem resposta no Whatsapp
+
+
+
+
+
+Bom dia! Meu nome é Ramon, faço parte do suporte da RIX Telecom.
+Verifiquei no sistema que algumas escolas de Altamira estão sem conexão. Poderia verificar por gentileza?
+Segue a lista:
+15105261 - EMEF CARLOS LEOCARPIO SOARES (Ativo no Zabbix - INEP não aparece na OPNsense - Desconectados na Controladora) - Sem resposta no Whatsapp
+15140417 - EMEF ARTUR TEIXEIRA (Ativo no Zabbix - INEP não aparece na OPNsense - Desconectados na Controladora) - Sem resposta no Whatsapp
+
+
+
+
+
+Bom dia! Meu nome é Ramon, faço parte do suporte da RIX Telecom.
+Verifiquei no sistema que algumas escolas de Santarém estão sem conexão. Poderia verificar por gentileza?
+Segue a lista:
+15162397 - E M E F SANTO ANDRE (Ativo no Zabbix - INEP não aparece na OPNsense - APs conectados na Controladora) - Informado pelo Prof Fernando que está normal na escola
+15013600 - EMEI E F PROFA MARIA DE JESUS AMORIM (Ativo no Zabbix - Não aparece os APs na VPN - Desconectados na Controladora) - Sem resposta no Whatsapp
+15012310 - EM ED INF ENS FUND DOM ANSELMO PIETRULLA (Ativo no Zabbix - Não aparece na OPNsense - Desconectados na Controladora) - Sem resposta no Whatsapp
+
+
+
+
+Bom dia! Meu nome é Ramon, faço parte do suporte da RIX Telecom.
+Verifiquei no sistema que algumas escolas de Oriximiná estão sem conexão. Poderia verificar por gentileza?
+Segue a lista:
+15003442 - EMEF NOVA ESPERANCA (Ativo no Zabbix - APs conectados na OPNsense - Desconectados na Controladora) - Sem resposta no Whatsapp
