@@ -123,6 +123,7 @@ const SELLER_INFO = {
     address: process.env.SELLER_ADDRESS || "Endereço não informado",
     city: process.env.SELLER_CITY || "",
 };
+const MAX_INSTALLMENTS = 12;
 const CONTRACT_TEMPLATE_PATH = path.join(
     __dirname,
     "logo e doc",
@@ -257,7 +258,7 @@ app.delete("/api/clients/:id", (req, res) => {
 
 app.post("/api/contracts/generate", (req, res) => {
     try {
-        const { operationId, clientId } = req.body || {};
+        const { operationId, clientId, installments: rawInstallments } = req.body || {};
         if (!operationId || !clientId) {
             return res
                 .status(400)
@@ -273,6 +274,13 @@ app.post("/api/contracts/generate", (req, res) => {
         if (!client) {
             return res.status(404).json({ message: "Cliente não encontrado." });
         }
+        const installments = Math.min(
+            Math.max(parseInt(rawInstallments, 10) || 1, 1),
+            MAX_INSTALLMENTS
+        );
+        const saleValue = Number(operation.valorVenda) || 0;
+        const installmentValue =
+            installments > 0 ? saleValue / installments : saleValue;
 
         let templateBinary;
         try {
@@ -312,6 +320,9 @@ app.post("/api/contracts/generate", (req, res) => {
             contato_comprador: client.contato || "",
             email_comprador: client.email || "",
             observacoes_comprador: client.observacoes || "",
+            quantidade_parcelas: `${installments}x`,
+            valor_parcela: formatCurrencyBR(installmentValue),
+            valor_total_venda: formatCurrencyBR(saleValue),
         });
 
         try {

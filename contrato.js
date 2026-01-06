@@ -1,6 +1,7 @@
 const API_OPERATIONS = "/api/operations";
 const API_CLIENTS = "/api/clients";
 const API_CONTRACT = "/api/contracts/generate";
+const MAX_INSTALLMENTS = 12;
 
 const stateContract = {
     operations: [],
@@ -12,6 +13,8 @@ const contractElements = {
     operationSelect: document.getElementById("contract-operation"),
     clientSelect: document.getElementById("contract-client"),
     preview: document.getElementById("preview-content"),
+    installmentsSelect: document.getElementById("contract-installments"),
+    installmentNote: document.getElementById("installment-note"),
 };
 
 const toastContract = document.getElementById("toast");
@@ -151,6 +154,65 @@ const autofillClient = () => {
     }
 };
 
+const getSelectedOperation = () => {
+    const operationId = contractElements.operationSelect?.value;
+    if (!operationId) return null;
+    return stateContract.operations.find((item) => item.id === operationId) || null;
+};
+
+const getSelectedInstallments = () =>
+    Number(contractElements.installmentsSelect?.value || 1);
+
+const updateInstallmentNote = () => {
+    const note = contractElements.installmentNote;
+    if (!note) return;
+    const operation = getSelectedOperation();
+    if (!operation) {
+        note.textContent = "Selecione uma venda para calcular.";
+        return;
+    }
+    const saleValue = Number(operation.valorVenda) || 0;
+    const parcels = getSelectedInstallments() || 1;
+    if (!saleValue) {
+        note.textContent = `${parcels}x — informe o valor da venda para calcular.`;
+        return;
+    }
+    const perValue = saleValue / parcels;
+    note.textContent = `${parcels}x de ${formatCurrency(perValue)} (total ${formatCurrency(
+        saleValue
+    )})`;
+};
+
+const updateInstallmentOptions = () => {
+    const select = contractElements.installmentsSelect;
+    if (!select) return;
+    const previousValue = select.value || "1";
+    const operation = getSelectedOperation();
+    const saleValue = Number(operation?.valorVenda) || 0;
+    const fragment = document.createDocumentFragment();
+    for (let i = 1; i <= MAX_INSTALLMENTS; i += 1) {
+        const option = document.createElement("option");
+        option.value = String(i);
+        const perValue = saleValue ? saleValue / i : 0;
+        option.textContent = saleValue
+            ? `${i}x de ${formatCurrency(perValue)}`
+            : `${i}x`;
+        if (previousValue === option.value) {
+            option.selected = true;
+        }
+        fragment.appendChild(option);
+    }
+    select.innerHTML = "";
+    select.appendChild(fragment);
+    if (!select.value) {
+        select.value =
+            Number(previousValue) >= 1 && Number(previousValue) <= MAX_INSTALLMENTS
+                ? previousValue
+                : "1";
+    }
+    updateInstallmentNote();
+};
+
 const renderPreview = () => {
     const container = contractElements.preview;
     if (!container) return;
@@ -165,6 +227,11 @@ const renderPreview = () => {
             "<p>Selecione uma venda e um cliente para visualizar os detalhes.</p>";
         return;
     }
+    const parcels = getSelectedInstallments() || 1;
+    const saleValue = Number(operation.valorVenda) || 0;
+    const parcelLabel = saleValue
+        ? `${parcels}x de ${formatCurrency(saleValue / parcels)}`
+        : `${parcels}x`;
     container.innerHTML = `
         <div>
             <h3>Venda selecionada</h3>
@@ -174,6 +241,7 @@ const renderPreview = () => {
                 <li><strong>Modelo:</strong> ${operation.modelo || operation.veiculo || "-"}</li>
                 <li><strong>Valor da venda:</strong> ${formatCurrency(operation.valorVenda || 0)}</li>
                 <li><strong>Valor da compra:</strong> ${formatCurrency(operation.valorCompra || 0)}</li>
+                <li><strong>Parcelamento:</strong> ${parcelLabel}</li>
             </ul>
         </div>
         <div>
@@ -190,6 +258,7 @@ const renderPreview = () => {
 };
 
 const handleOperationChange = () => {
+    updateInstallmentOptions();
     autofillClient();
     renderPreview();
 };
@@ -198,10 +267,16 @@ const handleClientChange = () => {
     renderPreview();
 };
 
+const handleInstallmentChange = () => {
+    updateInstallmentNote();
+    renderPreview();
+};
+
 const handleFormSubmit = async (event) => {
     event.preventDefault();
     const operationId = contractElements.operationSelect?.value;
     const clientId = contractElements.clientSelect?.value;
+    const installments = getSelectedInstallments();
     if (!operationId || !clientId) {
         showContractToast("Selecione uma venda e um cliente.", "error");
         return;
@@ -210,7 +285,7 @@ const handleFormSubmit = async (event) => {
         const response = await fetch(API_CONTRACT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ operationId, clientId }),
+            body: JSON.stringify({ operationId, clientId, installments }),
         });
         if (!response.ok) {
             throw new Error("Falha ao gerar contrato.");
@@ -242,6 +317,7 @@ const initContractPage = async () => {
         await Promise.all([loadOperations(), loadClients()]);
         populateOperationSelect();
         populateClientSelect();
+        updateInstallmentOptions();
         renderPreview();
     } catch (error) {
         console.error(error);
@@ -255,6 +331,10 @@ const initContractPage = async () => {
     contractElements.clientSelect?.addEventListener(
         "change",
         handleClientChange
+    );
+    contractElements.installmentsSelect?.addEventListener(
+        "change",
+        handleInstallmentChange
     );
     contractElements.form?.addEventListener("submit", handleFormSubmit);
 };
