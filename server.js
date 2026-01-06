@@ -323,6 +323,16 @@ app.post("/api/contracts/generate", (req, res) => {
             quantidade_parcelas: `${installments}x`,
             valor_parcela: formatCurrencyBR(installmentValue),
             valor_total_venda: formatCurrencyBR(saleValue),
+            valor_total_veiculo: formatCurrencyBR(saleValue),
+            tipo_veiculo: operation.veiculo || "",
+            marca_veiculo: operation.marca || "",
+            modelo_veiculo: operation.modelo || "",
+            cor_veiculo: operation.cor || "",
+            ano_modelo_veiculo: operation.anoModelo || "",
+            chassi_veiculo: operation.chassi || "",
+            renavam_veiculo: operation.renavan || "",
+            placa_veiculo: operation.placa || "",
+            combustivel_veiculo: operation.combustivel || "",
         });
 
         try {
