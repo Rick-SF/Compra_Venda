@@ -129,6 +129,15 @@ const CONTRACT_TEMPLATE_PATH = path.join(
     "logo e doc",
     "Contrato de compra venda.docx"
 );
+const formatLabeledInfo = (label, value) => {
+    const normalized =
+        typeof value === "number"
+            ? value.toString()
+            : (value || "").toString().trim();
+    return `${label}: ${normalized || "—"}`;
+};
+const formatCurrencyInfo = (label, value) =>
+    `${label}: ${formatCurrencyBR(value || 0)}`;
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -322,17 +331,27 @@ app.post("/api/contracts/generate", (req, res) => {
             observacoes_comprador: client.observacoes || "",
             quantidade_parcelas: `${installments}x`,
             valor_parcela: formatCurrencyBR(installmentValue),
+            valor_parcelas: formatCurrencyBR(installmentValue),
             valor_total_venda: formatCurrencyBR(saleValue),
             valor_total_veiculo: formatCurrencyBR(saleValue),
-            tipo_veiculo: operation.veiculo || "",
-            marca_veiculo: operation.marca || "",
-            modelo_veiculo: operation.modelo || "",
-            cor_veiculo: operation.cor || "",
-            ano_modelo_veiculo: operation.anoModelo || "",
-            chassi_veiculo: operation.chassi || "",
-            renavam_veiculo: operation.renavan || "",
-            placa_veiculo: operation.placa || "",
-            combustivel_veiculo: operation.combustivel || "",
+            tipo_veiculo: formatLabeledInfo("Tipo", operation.veiculo),
+            marca_veiculo: formatLabeledInfo("Marca", operation.marca),
+            modelo_veiculo: formatLabeledInfo(
+                "Modelo",
+                operation.modelo || operation.veiculo
+            ),
+            cor_veiculo: formatLabeledInfo("Cor", operation.cor),
+            ano_modelo_veiculo: formatLabeledInfo(
+                "Ano do modelo",
+                operation.anoModelo
+            ),
+            chassi_veiculo: formatLabeledInfo("Chassi", operation.chassi),
+            renavam_veiculo: formatLabeledInfo("Renavam", operation.renavan),
+            placa_veiculo: formatLabeledInfo("Placa", operation.placa),
+            combustivel_veiculo: formatLabeledInfo(
+                "Combustível",
+                operation.combustivel
+            ),
         });
 
         try {
