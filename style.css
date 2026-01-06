@@ -201,8 +201,39 @@ body {
     width: 100%;
     margin-left: 160px;
 }
+.contract-page .contract-payment-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+.contract-page .contract-payment-row label {
+    flex: 1 1 240px;
+    margin: 0;
+}
+.contract-page label.contract-payment-type,
+.contract-page label.contract-payment-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.contract-page label.contract-payment-value .field-title {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+.contract-page label.contract-payment-value input {
+    width: 100%;
+}
 .contract-page label.contract-installments {
     grid-column: 1 / -1;
+}
+.contract-page label.contract-total-field {
+    grid-column: 1 / -1;
+}
+.contract-page .contract-installments.is-hidden,
+.contract-page .contract-total-field.is-hidden {
+    display: none;
 }
 .contract-page .installment-row {
     display: flex;
@@ -211,7 +242,7 @@ body {
     align-items: center;
 }
 .contract-page .installment-row select {
-    min-width: 140px;
+    min-width: 160px;
     flex: 0 0 auto;
 }
 .contract-page .installment-note {

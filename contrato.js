@@ -15,6 +15,14 @@ const contractElements = {
     preview: document.getElementById("preview-content"),
     installmentsSelect: document.getElementById("contract-installments"),
     installmentNote: document.getElementById("installment-note"),
+    paymentType: document.getElementById("contract-payment-type"),
+    paymentValueInput: document.getElementById("contract-payment-value"),
+    paymentValueLabel: document.getElementById("payment-value-label"),
+    totalValueInput: document.getElementById("contract-total-value"),
+    installmentsWrapper: document.querySelector(
+        "[data-contract-section='installments']"
+    ),
+    totalWrapper: document.querySelector("[data-contract-section='total']"),
 };
 
 const toastContract = document.getElementById("toast");
@@ -39,6 +47,12 @@ const formatCurrency = (value) =>
         style: "currency",
         currency: "BRL",
     }).format(value || 0);
+const currencyInputFormatter = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
+const formatCurrencyInput = (value) =>
+    currencyInputFormatter.format(value || 0);
 
 const formatDate = (value) => {
     if (!value) return "-";
@@ -52,6 +66,28 @@ const formatDate = (value) => {
     }
     return date.toLocaleDateString("pt-BR");
 };
+
+const parseCurrencyValue = (value) => {
+    if (typeof value === "number") return value;
+    if (!value) return 0;
+    const cleaned = value
+        .toString()
+        .replace(/\s/g, "")
+        .replace(/[R$\u00A0]/gi, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+    return Number(cleaned) || 0;
+};
+
+const clampInstallmentsValue = (value) => {
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed < 1) return 1;
+    if (parsed > MAX_INSTALLMENTS) return MAX_INSTALLMENTS;
+    return parsed;
+};
+
+const getPaymentType = () =>
+    contractElements.paymentType?.value === "parcelado" ? "parcelado" : "vista";
 
 const loadOperations = async () => {
     const response = await fetch(API_OPERATIONS);
@@ -160,41 +196,96 @@ const getSelectedOperation = () => {
     return stateContract.operations.find((item) => item.id === operationId) || null;
 };
 
-const getSelectedInstallments = () =>
-    Number(contractElements.installmentsSelect?.value || 1);
+const getSaleValue = () => Number(getSelectedOperation()?.valorVenda) || 0;
+
+const getSelectedInstallments = () => {
+    if (getPaymentType() !== "parcelado") return 1;
+    return clampInstallmentsValue(contractElements.installmentsSelect?.value || 1);
+};
+
+const getEntryValue = () => {
+    const paymentType = getPaymentType();
+    const saleValue = getSaleValue();
+    if (paymentType !== "parcelado") return saleValue;
+    const raw = contractElements.paymentValueInput?.dataset.rawValue;
+    if (!raw) return 0;
+    const typed = Number(raw);
+    if (!Number.isFinite(typed) || typed <= 0) return 0;
+    if (typed >= saleValue) return saleValue;
+    return typed;
+};
+
+const getFinancedValue = () => {
+    const saleValue = getSaleValue();
+    const entry = getEntryValue();
+    const remaining = saleValue - entry;
+    return remaining > 0 ? remaining : 0;
+};
+
+const getInstallmentValue = () => {
+    if (getPaymentType() !== "parcelado") return getSaleValue();
+    const financed = getFinancedValue();
+    const installments = getSelectedInstallments();
+    if (!installments) return financed;
+    return financed / installments;
+};
+
+const toggleSection = (element, visible) => {
+    if (!element) return;
+    element.classList.toggle("is-hidden", !visible);
+};
 
 const updateInstallmentNote = () => {
     const note = contractElements.installmentNote;
     if (!note) return;
-    const operation = getSelectedOperation();
-    if (!operation) {
+    if (!getSelectedOperation()) {
         note.textContent = "Selecione uma venda para calcular.";
         return;
     }
-    const saleValue = Number(operation.valorVenda) || 0;
-    const parcels = getSelectedInstallments() || 1;
-    if (!saleValue) {
-        note.textContent = `${parcels}x — informe o valor da venda para calcular.`;
+    const saleValue = getSaleValue();
+    if (getPaymentType() !== "parcelado") {
+        note.textContent = saleValue
+            ? `Pagamento à vista no valor de ${formatCurrency(saleValue)}.`
+            : "Pagamento à vista. Informe o valor da venda.";
         return;
     }
-    const perValue = saleValue / parcels;
-    note.textContent = `${parcels}x de ${formatCurrency(perValue)} (total ${formatCurrency(
-        saleValue
-    )})`;
+    const parcels = getSelectedInstallments() || 1;
+    const financed = getFinancedValue();
+    const perValue = parcels ? financed / parcels : financed;
+    note.textContent = financed
+        ? `${parcels}x de ${formatCurrency(perValue)} (restante ${formatCurrency(
+              financed
+          )})`
+        : `${parcels}x (sem saldo a parcelar)`;
 };
 
 const updateInstallmentOptions = () => {
     const select = contractElements.installmentsSelect;
     if (!select) return;
+    const paymentType = getPaymentType();
     const previousValue = select.value || "1";
-    const operation = getSelectedOperation();
-    const saleValue = Number(operation?.valorVenda) || 0;
     const fragment = document.createDocumentFragment();
+
+    if (paymentType !== "parcelado") {
+        const singleOption = document.createElement("option");
+        singleOption.value = "1";
+        singleOption.textContent = "1x";
+        fragment.appendChild(singleOption);
+        select.innerHTML = "";
+        select.appendChild(fragment);
+        select.value = "1";
+        select.disabled = true;
+        updateInstallmentNote();
+        return;
+    }
+
+    select.disabled = false;
+    const financed = getFinancedValue();
     for (let i = 1; i <= MAX_INSTALLMENTS; i += 1) {
         const option = document.createElement("option");
         option.value = String(i);
-        const perValue = saleValue ? saleValue / i : 0;
-        option.textContent = saleValue
+        const perValue = financed ? financed / i : 0;
+        option.textContent = financed
             ? `${i}x de ${formatCurrency(perValue)}`
             : `${i}x`;
         if (previousValue === option.value) {
@@ -205,12 +296,50 @@ const updateInstallmentOptions = () => {
     select.innerHTML = "";
     select.appendChild(fragment);
     if (!select.value) {
-        select.value =
-            Number(previousValue) >= 1 && Number(previousValue) <= MAX_INSTALLMENTS
-                ? previousValue
-                : "1";
+        select.value = clampInstallmentsValue(previousValue).toString();
     }
     updateInstallmentNote();
+};
+
+const updateTotalField = () => {
+    if (!contractElements.totalValueInput) return;
+    const saleValue = getSaleValue();
+    contractElements.totalValueInput.value = saleValue
+        ? formatCurrency(saleValue)
+        : "";
+};
+
+const updatePaymentFieldState = () => {
+    const paymentType = getPaymentType();
+    const saleValue = getSaleValue();
+    const label = contractElements.paymentValueLabel;
+    const input = contractElements.paymentValueInput;
+    if (label && input) {
+        const previousMode = input.dataset.mode;
+        if (paymentType === "parcelado") {
+            label.textContent = "Valor da entrada";
+            input.readOnly = false;
+            const typed =
+                previousMode === "parcelado"
+                    ? parseCurrencyValue(input.value || "0")
+                    : 0;
+            const current = Math.min(Math.max(typed, 0), saleValue);
+            input.value =
+                saleValue && current > 0 ? formatCurrency(current) : "";
+            input.dataset.rawValue = current > 0 ? current.toString() : "";
+            input.dataset.mode = "parcelado";
+        } else {
+            label.textContent = "Valor total";
+            input.readOnly = true;
+            input.dataset.mode = "vista";
+            input.value = saleValue ? formatCurrency(saleValue) : "";
+            input.dataset.rawValue = saleValue ? saleValue.toString() : "";
+        }
+    }
+    toggleSection(contractElements.installmentsWrapper, paymentType === "parcelado");
+    toggleSection(contractElements.totalWrapper, paymentType === "parcelado");
+    updateTotalField();
+    updateInstallmentOptions();
 };
 
 const renderPreview = () => {
@@ -227,11 +356,16 @@ const renderPreview = () => {
             "<p>Selecione uma venda e um cliente para visualizar os detalhes.</p>";
         return;
     }
-    const parcels = getSelectedInstallments() || 1;
-    const saleValue = Number(operation.valorVenda) || 0;
-    const parcelLabel = saleValue
-        ? `${parcels}x de ${formatCurrency(saleValue / parcels)}`
-        : `${parcels}x`;
+    const paymentType = getPaymentType();
+    const saleValue = getSaleValue();
+    const entryValue = getEntryValue();
+    const installments = getSelectedInstallments() || 1;
+    const installmentValue = getInstallmentValue();
+    const financed = getFinancedValue();
+    const parcelLabel =
+        paymentType === "parcelado"
+            ? `${installments}x de ${formatCurrency(installmentValue)}`
+            : "Pagamento à vista";
     container.innerHTML = `
         <div>
             <h3>Venda selecionada</h3>
@@ -241,7 +375,18 @@ const renderPreview = () => {
                 <li><strong>Modelo:</strong> ${operation.modelo || operation.veiculo || "-"}</li>
                 <li><strong>Valor da venda:</strong> ${formatCurrency(operation.valorVenda || 0)}</li>
                 <li><strong>Valor da compra:</strong> ${formatCurrency(operation.valorCompra || 0)}</li>
+                <li><strong>Forma de pagamento:</strong> ${
+                    paymentType === "parcelado" ? "Parcelado" : "À vista"
+                }</li>
+                <li><strong>Entrada:</strong> ${formatCurrency(entryValue)}</li>
                 <li><strong>Parcelamento:</strong> ${parcelLabel}</li>
+                ${
+                    paymentType === "parcelado"
+                        ? `<li><strong>Saldo parcelado:</strong> ${formatCurrency(
+                              financed
+                          )}</li>`
+                        : ""
+                }
             </ul>
         </div>
         <div>
@@ -258,7 +403,7 @@ const renderPreview = () => {
 };
 
 const handleOperationChange = () => {
-    updateInstallmentOptions();
+    updatePaymentFieldState();
     autofillClient();
     renderPreview();
 };
@@ -272,11 +417,44 @@ const handleInstallmentChange = () => {
     renderPreview();
 };
 
+const handlePaymentTypeChange = () => {
+    updatePaymentFieldState();
+    renderPreview();
+};
+
+const handleEntryInput = () => {
+    if (getPaymentType() !== "parcelado") return;
+    const input = contractElements.paymentValueInput;
+    if (!input) return;
+    const cleaned = input.value.replace(/[^\d]/g, "");
+    const saleValue = getSaleValue();
+    let numeric = Number(cleaned) / 100;
+    numeric = Math.min(Math.max(numeric, 0), saleValue);
+    input.dataset.rawValue = numeric > 0 ? numeric.toString() : "";
+    input.value = numeric > 0 ? formatCurrencyInput(numeric) : "";
+    updateInstallmentOptions();
+    renderPreview();
+};
+
+const handleEntryBlur = () => {
+    if (getPaymentType() !== "parcelado") return;
+    if (!contractElements.paymentValueInput) return;
+    const entry = getEntryValue();
+    contractElements.paymentValueInput.dataset.rawValue =
+        entry > 0 ? entry.toString() : "";
+    contractElements.paymentValueInput.value =
+        entry > 0 ? formatCurrency(entry) : "";
+    updateInstallmentOptions();
+    renderPreview();
+};
+
 const handleFormSubmit = async (event) => {
     event.preventDefault();
     const operationId = contractElements.operationSelect?.value;
     const clientId = contractElements.clientSelect?.value;
     const installments = getSelectedInstallments();
+    const paymentType = getPaymentType();
+    const entryValue = getEntryValue();
     if (!operationId || !clientId) {
         showContractToast("Selecione uma venda e um cliente.", "error");
         return;
@@ -285,7 +463,13 @@ const handleFormSubmit = async (event) => {
         const response = await fetch(API_CONTRACT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ operationId, clientId, installments }),
+            body: JSON.stringify({
+                operationId,
+                clientId,
+                installments,
+                paymentType,
+                entryValue,
+            }),
         });
         if (!response.ok) {
             throw new Error("Falha ao gerar contrato.");
@@ -317,7 +501,7 @@ const initContractPage = async () => {
         await Promise.all([loadOperations(), loadClients()]);
         populateOperationSelect();
         populateClientSelect();
-        updateInstallmentOptions();
+        updatePaymentFieldState();
         renderPreview();
     } catch (error) {
         console.error(error);
@@ -336,6 +520,12 @@ const initContractPage = async () => {
         "change",
         handleInstallmentChange
     );
+    contractElements.paymentType?.addEventListener(
+        "change",
+        handlePaymentTypeChange
+    );
+    contractElements.paymentValueInput?.addEventListener("input", handleEntryInput);
+    contractElements.paymentValueInput?.addEventListener("blur", handleEntryBlur);
     contractElements.form?.addEventListener("submit", handleFormSubmit);
 };
 

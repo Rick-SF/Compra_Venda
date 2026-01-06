@@ -56,7 +56,26 @@
                             <option value="">Carregando clientes...</option>
                         </select>
                     </label>
-                    <label class="contract-installments">
+                    <div class="contract-payment-row">
+                        <label class="contract-payment-type">
+                            Forma de pagamento
+                            <select name="paymentType" id="contract-payment-type" required>
+                                <option value="vista">À vista</option>
+                                <option value="parcelado">Parcelado</option>
+                            </select>
+                        </label>
+                        <label class="contract-payment-value">
+                            <span class="field-title" id="payment-value-label">Valor total</span>
+                            <input
+                                type="text"
+                                id="contract-payment-value"
+                                name="paymentValue"
+                                placeholder="R$ 0,00"
+                                readonly
+                            >
+                        </label>
+                    </div>
+                    <label class="contract-installments" data-contract-section="installments">
                         Quantidade de parcelas
                         <div class="installment-row">
                             <select name="installments" id="contract-installments" required>
@@ -77,6 +96,10 @@
                                 Selecione uma venda para calcular.
                             </span>
                         </div>
+                    </label>
+                    <label class="contract-total-field" data-contract-section="total">
+                        Valor total
+                        <input type="text" id="contract-total-value" readonly>
                     </label>
                     <div class="form-actions">
                         <button type="submit">Gerar contrato</button>

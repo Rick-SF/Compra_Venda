@@ -280,6 +280,34 @@ const numberToCurrencyWords = (value) => {
     }
     return result;
 };
+const clampInstallments = (value) =>
+    Math.min(Math.max(parseInt(value, 10) || 1, 1), MAX_INSTALLMENTS);
+const onlyDigits = (value = "") => value.toString().replace(/\D/g, "");
+const formatCpf = (value) => {
+    const digits = onlyDigits(value);
+    if (digits.length !== 11) return value || "";
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+        6,
+        9
+    )}-${digits.slice(9)}`;
+};
+const formatRg = (value) => {
+    const digits = onlyDigits(value);
+    if (digits.length < 8) return value || "";
+    const body = digits.slice(0, digits.length - 1);
+    const check = digits.slice(-1);
+    return `${body.slice(0, 2)}.${body.slice(2, 5)}.${body.slice(
+        5
+    )}-${check}`;
+};
+const formatCnh = (value) => {
+    const digits = onlyDigits(value);
+    if (digits.length !== 11) return value || "";
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+        6,
+        9
+    )}-${digits.slice(9)}`;
+};
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -409,7 +437,13 @@ app.delete("/api/clients/:id", (req, res) => {
 
 app.post("/api/contracts/generate", (req, res) => {
     try {
-        const { operationId, clientId, installments: rawInstallments } = req.body || {};
+        const {
+            operationId,
+            clientId,
+            installments: rawInstallments,
+            paymentType: rawPaymentType,
+            entryValue: rawEntryValue,
+        } = req.body || {};
         if (!operationId || !clientId) {
             return res
                 .status(400)
@@ -425,13 +459,40 @@ app.post("/api/contracts/generate", (req, res) => {
         if (!client) {
             return res.status(404).json({ message: "Cliente não encontrado." });
         }
-        const installments = Math.min(
-            Math.max(parseInt(rawInstallments, 10) || 1, 1),
-            MAX_INSTALLMENTS
-        );
         const saleValue = Number(operation.valorVenda) || 0;
-        const installmentValue =
-            installments > 0 ? saleValue / installments : saleValue;
+        const paymentType =
+            typeof rawPaymentType === "string" &&
+            rawPaymentType.toLowerCase() === "parcelado"
+                ? "parcelado"
+                : "vista";
+        let installments = clampInstallments(rawInstallments);
+        let entryValue = saleValue;
+        let financedValue = 0;
+        let installmentValue = saleValue;
+
+        if (paymentType === "parcelado") {
+            entryValue = Math.min(
+                Math.max(Number(rawEntryValue) || 0, 0),
+                saleValue
+            );
+            financedValue = Math.max(saleValue - entryValue, 0);
+            installments = clampInstallments(rawInstallments);
+            installmentValue =
+                installments > 0 ? financedValue / installments : financedValue;
+        } else {
+            installments = 1;
+            entryValue = saleValue;
+            financedValue = 0;
+            installmentValue = saleValue;
+        }
+        const paymentClause =
+            paymentType === "parcelado"
+                ? `em ${installments} parcela(s) mensal(is), igual(is) e sucessiva(s) de ${formatCurrencyBR(
+                      installmentValue
+                  )} (${numberToCurrencyWords(
+                      installmentValue
+                  )}), a ser(em) paga(s) até o dia (inserir dia) de cada mês, ou dia útil seguinte, vencendo a primeira em (data) e a última em (data).`
+                : "na forma de pagamento à vista.";
 
         let templateBinary;
         try {
@@ -463,9 +524,9 @@ app.post("/api/contracts/generate", (req, res) => {
             estado_civil_comprador: client.estadoCivil || "",
             profissao_comprador: client.profissao || "",
             "profissão_comprador": client.profissao || "",
-            cpf_comprador: client.cpf || "",
-            rg_comprador: client.rg || "",
-            cnh_comprador: client.cnh || "",
+            cpf_comprador: formatCpf(client.cpf),
+            rg_comprador: formatRg(client.rg),
+            cnh_comprador: formatCnh(client.cnh),
             endereco_comprador: client.endereco || "",
             "endereço_comprador": client.endereco || "",
             contato_comprador: client.contato || "",
@@ -478,6 +539,13 @@ app.post("/api/contracts/generate", (req, res) => {
             valor_total_veiculo: formatCurrencyBR(saleValue),
             valor_total_extenso: `(${numberToCurrencyWords(saleValue)})`,
             valor_parcela_extenso: `(${numberToCurrencyWords(installmentValue)})`,
+            valor_entrada: formatCurrencyBR(entryValue),
+            valor_entrada_extenso: `(${numberToCurrencyWords(entryValue)})`,
+            valor_restante: formatCurrencyBR(financedValue),
+            valor_restante_extenso: `(${numberToCurrencyWords(financedValue)})`,
+            tipo_pagamento:
+                paymentType === "parcelado" ? "Parcelado" : "À vista",
+            clausula_pagamento: paymentClause,
             tipo_veiculo: formatLabeledInfo("Tipo", operation.veiculo),
             marca_veiculo: formatLabeledInfo("Marca", operation.marca),
             modelo_veiculo: formatLabeledInfo(
