@@ -102,6 +102,19 @@
                             <input type="text" name="codigoCLAe" placeholder="CLAe">
                         </label>
                         <label>
+                            Tipo de combustível
+                            <select name="combustivel" required>
+                                <option value="">Selecione</option>
+                                <option value="Gasolina">Gasolina</option>
+                                <option value="Etanol">Etanol</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="Flex">Flex</option>
+                                <option value="GNV">GNV</option>
+                                <option value="Elétrico">Elétrico</option>
+                                <option value="Híbrido">Híbrido</option>
+                            </select>
+                        </label>
+                        <label>
                             Valor da Compra (R$)
                             <input type="text" name="valorCompra" required data-mask="currency" placeholder="R$1.000,00">
                         </label>
@@ -148,6 +161,7 @@
                                 <th>Renavam</th>
                                 <th>Código CRVe</th>
                                 <th>Código CLAe</th>
+                                <th>Combustível</th>
                                 <th>Valor Compra</th>
                                 <th>Observações</th>
                                 <th>Ações</th>
@@ -155,7 +169,7 @@
                         </thead>
                         <tbody id="transactions-body">
                             <tr class="placeholder">
-                                <td colspan="19">Nenhuma operação cadastrada ainda.</td>
+                                <td colspan="20">Nenhuma operação cadastrada ainda.</td>
                             </tr>
                         </tbody>
                     </table>

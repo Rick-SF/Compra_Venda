@@ -505,6 +505,7 @@ const vehicleFields = [
     "renavan",
     "codigoCRVe",
     "codigoCLAe",
+    "combustivel",
     "codigoATPVe",
 ];
 
@@ -520,6 +521,7 @@ const purchaseDetailFields = [
     "renavan",
     "codigoCRVe",
     "codigoCLAe",
+    "combustivel",
 ];
 
 const ensureVehicleFields = (record = {}) => {
@@ -551,6 +553,22 @@ const purchaseModalFields = [
     { name: "renavan", label: "Renavam", type: "text" },
     { name: "codigoCRVe", label: "Código CRVe", type: "text" },
     { name: "codigoCLAe", label: "Código CLAe", type: "text" },
+    {
+        name: "combustivel",
+        label: "Tipo de combustível",
+        type: "select",
+        required: true,
+        placeholder: "Selecione",
+        options: [
+            "Gasolina",
+            "Etanol",
+            "Diesel",
+            "Flex",
+            "GNV",
+            "Elétrico",
+            "Híbrido",
+        ],
+    },
     { name: "valorCompra", label: "Valor da Compra (R$)", type: "text", required: true, mask: "currency" },
     { name: "custosExtras", label: "Custos Extras (R$)", type: "text", mask: "currency" },
     { name: "observacoes", label: "Observações", type: "textarea" },
@@ -563,6 +581,7 @@ const saleModalFields = [
         label: "Comprador",
         type: "select",
         required: true,
+        placeholder: "Selecione um cliente",
         options: () =>
             state.clients.map((client) => ({
                 value: client.nome || "",
@@ -614,8 +633,9 @@ const buildFieldMarkup = (field, value = "") => {
         const hasCurrent =
             currentValue &&
             !options.some((opt) => opt.value === currentValue || opt === currentValue);
+        const placeholder = field.placeholder || "Selecione uma opção";
         const optionMarkup = [
-            '<option value="">Selecione um cliente</option>',
+            `<option value="">${escapeValue(placeholder)}</option>`,
             ...options.map((opt) => {
                 const optionValue = typeof opt === "string" ? opt : opt.value;
                 const optionLabel = typeof opt === "string" ? opt : opt.label;
@@ -673,6 +693,7 @@ const getPurchaseUpdatesFromForm = (data) => ({
     renavan: data.get("renavan")?.trim(),
     codigoCRVe: data.get("codigoCRVe")?.trim(),
     codigoCLAe: data.get("codigoCLAe")?.trim(),
+    combustivel: data.get("combustivel")?.trim(),
     valorCompra: toNumber(data.get("valorCompra")),
     custosExtras: toNumber(data.get("custosExtras")),
     observacoes: data.get("observacoes")?.trim(),
@@ -785,6 +806,7 @@ const columnRenderers = {
     renavam: (record) => `<td>${record.renavan || "-"}</td>`,
     codigoCRVe: (record) => `<td>${record.codigoCRVe || "-"}</td>`,
     codigoCLAe: (record) => `<td>${record.codigoCLAe || "-"}</td>`,
+    combustivel: (record) => `<td>${record.combustivel || "-"}</td>`,
     codigoATPVe: (record) => `<td>${record.codigoATPVe || "-"}</td>`,
     valorCompra: (record) => {
         const value = record.valorCompra ? formatCurrency(record.valorCompra) : "-";
@@ -835,6 +857,7 @@ const TABLE_COLUMNS = {
         "renavam",
         "codigoCRVe",
         "codigoCLAe",
+        "combustivel",
         "valorCompra",
         "observacoes",
         "actions",
@@ -1085,6 +1108,7 @@ const handlePurchaseSubmit = async (event) => {
         renavan: data.get("renavan")?.trim(),
         codigoCRVe: data.get("codigoCRVe")?.trim(),
         codigoCLAe: data.get("codigoCLAe")?.trim(),
+        combustivel: data.get("combustivel")?.trim(),
         contato: "",
         valorCompra: toNumber(data.get("valorCompra")),
         valorVenda: 0,

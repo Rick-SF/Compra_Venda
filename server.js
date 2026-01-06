@@ -56,11 +56,12 @@ db.exec(`
         contato TEXT,
         chassi TEXT,
         renavan TEXT,
-        codigoCRVe TEXT,
-        codigoCLAe TEXT,
-        codigoATPVe TEXT,
-        valorCompra REAL,
-        valorVenda REAL,
+    codigoCRVe TEXT,
+    codigoCLAe TEXT,
+    combustivel TEXT,
+    codigoATPVe TEXT,
+    valorCompra REAL,
+    valorVenda REAL,
         custosExtras REAL,
         observacoes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -79,6 +80,7 @@ ensureColumn("clients", "observacoes", "TEXT");
 ensureColumn("clients", "nacionalidade", "TEXT");
 ensureColumn("clients", "estadoCivil", "TEXT");
 ensureColumn("clients", "profissao", "TEXT");
+ensureColumn("operations", "combustivel", "TEXT");
 
 app.use(cors());
 app.use(express.json());
@@ -91,6 +93,7 @@ const mapOperationRow = (row) => ({
     valorCompra: row.valorCompra ?? 0,
     valorVenda: row.valorVenda ?? 0,
     custosExtras: row.custosExtras ?? 0,
+    combustivel: row.combustivel || "",
 });
 
 const formatCurrencyBR = (value) =>
@@ -141,12 +144,12 @@ app.post("/api/operations", (req, res) => {
         INSERT INTO operations (
             id, tipo, data, veiculo, marca, modelo, cor, anoFabricacao, anoModelo,
             placa, cidade, uf, parceiro, contato, chassi, renavan,
-            codigoCRVe, codigoCLAe, codigoATPVe, valorCompra, valorVenda,
+            codigoCRVe, codigoCLAe, combustivel, codigoATPVe, valorCompra, valorVenda,
             custosExtras, observacoes
         ) VALUES (
             @id, @tipo, @data, @veiculo, @marca, @modelo, @cor, @anoFabricacao, @anoModelo,
             @placa, @cidade, @uf, @parceiro, @contato, @chassi, @renavan,
-            @codigoCRVe, @codigoCLAe, @codigoATPVe, @valorCompra, @valorVenda,
+            @codigoCRVe, @codigoCLAe, @combustivel, @codigoATPVe, @valorCompra, @valorVenda,
             @custosExtras, @observacoes
         )
     `);
@@ -177,6 +180,7 @@ app.put("/api/operations/:id", (req, res) => {
             renavan=@renavan,
             codigoCRVe=@codigoCRVe,
             codigoCLAe=@codigoCLAe,
+            combustivel=@combustivel,
             codigoATPVe=@codigoATPVe,
             valorCompra=@valorCompra,
             valorVenda=@valorVenda,
