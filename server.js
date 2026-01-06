@@ -129,6 +129,61 @@ const CONTRACT_TEMPLATE_PATH = path.join(
     "logo e doc",
     "Contrato de compra venda.docx"
 );
+const UNITS = [
+    "",
+    "um",
+    "dois",
+    "tres",
+    "quatro",
+    "cinco",
+    "seis",
+    "sete",
+    "oito",
+    "nove",
+];
+const TEENS = [
+    "dez",
+    "onze",
+    "doze",
+    "treze",
+    "catorze",
+    "quinze",
+    "dezesseis",
+    "dezessete",
+    "dezoito",
+    "dezenove",
+];
+const TENS = [
+    "",
+    "",
+    "vinte",
+    "trinta",
+    "quarenta",
+    "cinquenta",
+    "sessenta",
+    "setenta",
+    "oitenta",
+    "noventa",
+];
+const HUNDREDS = [
+    "",
+    "cento",
+    "duzentos",
+    "trezentos",
+    "quatrocentos",
+    "quinhentos",
+    "seiscentos",
+    "setecentos",
+    "oitocentos",
+    "novecentos",
+];
+const SCALE = [
+    { singular: "", plural: "" },
+    { singular: "mil", plural: "mil" },
+    { singular: "milhao", plural: "milhoes" },
+    { singular: "bilhao", plural: "bilhoes" },
+    { singular: "trilhao", plural: "trilhoes" },
+];
 const formatLabeledInfo = (label, value) => {
     const normalized =
         typeof value === "number"
@@ -138,6 +193,93 @@ const formatLabeledInfo = (label, value) => {
 };
 const formatCurrencyInfo = (label, value) =>
     `${label}: ${formatCurrencyBR(value || 0)}`;
+const chunkToWords = (number) => {
+    if (number === 0) return "";
+    if (number === 100) return "cem";
+    const hundred = Math.floor(number / 100);
+    const remainder = number % 100;
+    const parts = [];
+    if (hundred) {
+        parts.push(HUNDREDS[hundred]);
+    }
+    if (remainder) {
+        if (remainder < 10) {
+            parts.push(UNITS[remainder]);
+        } else if (remainder < 20) {
+            parts.push(TEENS[remainder - 10]);
+        } else {
+            const tens = Math.floor(remainder / 10);
+            const units = remainder % 10;
+            if (units) {
+                parts.push(`${TENS[tens]} e ${UNITS[units]}`);
+            } else {
+                parts.push(TENS[tens]);
+            }
+        }
+    }
+    return parts.join(" e ");
+};
+const joinSegments = (segments) => {
+    if (!segments.length) return "";
+    return segments.reduce((acc, segment, index) => {
+        if (!acc) return segment;
+        const isLast = index === segments.length - 1;
+        return `${acc}${isLast ? " e " : " "}${segment}`;
+    }, "");
+};
+const numberToWords = (value) => {
+    if (value === 0) return "zero";
+    const segments = [];
+    let remaining = value;
+    let scaleIndex = 0;
+    while (remaining > 0) {
+        const chunk = remaining % 1000;
+        if (chunk) {
+            let chunkWords = chunkToWords(chunk);
+            if (scaleIndex === 1) {
+                chunkWords =
+                    chunk === 1 ? "mil" : `${chunkWords} mil`;
+            } else if (scaleIndex > 1) {
+                const scaleWord =
+                    chunk === 1
+                        ? SCALE[scaleIndex].singular
+                        : SCALE[scaleIndex].plural;
+                chunkWords = `${chunkWords} ${scaleWord}`;
+            }
+            segments.unshift(chunkWords);
+        }
+        remaining = Math.floor(remaining / 1000);
+        scaleIndex += 1;
+    }
+    return joinSegments(segments);
+};
+const numberToCurrencyWords = (value) => {
+    const normalized = Math.round(Math.abs(Number(value) || 0) * 100);
+    const integer = Math.floor(normalized / 100);
+    const cents = normalized % 100;
+    const integerText =
+        integer === 0
+            ? ""
+            : `${numberToWords(integer)} ${
+                  integer === 1 ? "real" : "reais"
+              }`;
+    const centsText =
+        cents === 0
+            ? ""
+            : `${numberToWords(cents)} ${
+                  cents === 1 ? "centavo" : "centavos"
+              }`;
+    let result;
+    if (integerText && centsText) {
+        result = `${integerText} e ${centsText}`;
+    } else {
+        result = integerText || centsText || "zero real";
+    }
+    if (value < 0) {
+        result = `menos ${result}`;
+    }
+    return result;
+};
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -334,6 +476,8 @@ app.post("/api/contracts/generate", (req, res) => {
             valor_parcelas: formatCurrencyBR(installmentValue),
             valor_total_venda: formatCurrencyBR(saleValue),
             valor_total_veiculo: formatCurrencyBR(saleValue),
+            valor_total_extenso: `(${numberToCurrencyWords(saleValue)})`,
+            valor_parcela_extenso: `(${numberToCurrencyWords(installmentValue)})`,
             tipo_veiculo: formatLabeledInfo("Tipo", operation.veiculo),
             marca_veiculo: formatLabeledInfo("Marca", operation.marca),
             modelo_veiculo: formatLabeledInfo(
