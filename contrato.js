@@ -222,7 +222,7 @@ const handleFormSubmit = async (event) => {
         );
         const fileName = `contrato-${
             operation?.placa || "venda"
-        }.pdf`.replace(/\s+/g, "-");
+        }.docx`.replace(/\s+/g, "-");
         const link = document.createElement("a");
         link.href = url;
         link.download = fileName;

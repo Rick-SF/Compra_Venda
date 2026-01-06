@@ -4,7 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const Database = require("better-sqlite3");
-const PDFDocument = require("pdfkit");
+const JSZip = require("jszip");
 
 dotenv.config();
 
@@ -119,6 +119,20 @@ const SELLER_INFO = {
     address: process.env.SELLER_ADDRESS || "Endereço não informado",
     city: process.env.SELLER_CITY || "",
 };
+const CONTRACT_TEMPLATE_PATH = path.join(
+    __dirname,
+    "logo e doc",
+    "Contrato de compra venda.docx"
+);
+
+const escapeXml = (value = "") =>
+    value
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
 app.get("/api/operations", (req, res) => {
     const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
@@ -245,7 +259,7 @@ app.delete("/api/clients/:id", (req, res) => {
     res.status(204).end();
 });
 
-app.post("/api/contracts/generate", (req, res) => {
+app.post("/api/contracts/generate", async (req, res) => {
     try {
         const { operationId, clientId } = req.body || {};
         if (!operationId || !clientId) {
@@ -264,90 +278,54 @@ app.post("/api/contracts/generate", (req, res) => {
             return res.status(404).json({ message: "Cliente não encontrado." });
         }
 
-        const vehicleYears = [operation.anoModelo, operation.anoFabricacao]
-            .filter(Boolean)
-            .join(" / ");
+        let templateBuffer;
+        try {
+            templateBuffer = fs.readFileSync(CONTRACT_TEMPLATE_PATH);
+        } catch {
+            return res
+                .status(500)
+                .json({ message: "Arquivo de contrato base não encontrado." });
+        }
 
-        const doc = new PDFDocument({ size: "A4", margin: 50 });
-        const filename = `contrato-${operation.placa || "venda"}.pdf`.replace(
+        const replacements = {
+            nome_comprador: client.nome || "",
+            nacionalidade_comprador: client.nacionalidade || "",
+            estado_civil_comprador: client.estadoCivil || "",
+            profissao_comprador: client.profissao || "",
+            cpf_comprador: client.cpf || "",
+            rg_comprador: client.rg || "",
+            cnh_comprador: client.cnh || "",
+            endereco_comprador: client.endereco || "",
+            contato_comprador: client.contato || "",
+            email_comprador: client.email || "",
+            observacoes_comprador: client.observacoes || "",
+        };
+
+        const zip = await JSZip.loadAsync(templateBuffer);
+        const documentFile = zip.file("word/document.xml");
+        if (!documentFile) {
+            return res
+                .status(500)
+                .json({ message: "Estrutura do contrato base inválida." });
+        }
+        let documentXml = await documentFile.async("string");
+        Object.entries(replacements).forEach(([key, value]) => {
+            const regex = new RegExp(`\\{${key}\\}`, "g");
+            documentXml = documentXml.replace(regex, escapeXml(value || ""));
+        });
+        zip.file("word/document.xml", documentXml);
+        const buffer = await zip.generateAsync({ type: "nodebuffer" });
+        const filename = `contrato-${operation.placa || "venda"}.docx`.replace(
             /\s+/g,
             "-"
         );
-        res.setHeader("Content-Type", "application/pdf");
+
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-        doc.pipe(res);
-
-        doc.fontSize(18).text("Contrato de Compra e Venda de Veículo", {
-            align: "center",
-        });
-        doc.moveDown();
-        doc.fontSize(12).text(
-            `Em ${formatDateBR(new Date().toISOString())}, as partes abaixo qualificadas firmam o presente contrato.`
-        );
-
-        const section = (title) => {
-            doc.moveDown();
-            doc.fontSize(14).text(title, { underline: true });
-            doc.moveDown(0.3);
-            doc.fontSize(12);
-        };
-
-        section("Vendedor");
-        doc.text(`Nome: ${SELLER_INFO.name}`);
-        doc.text(`Documento: ${SELLER_INFO.document}`);
-        doc.text(`Endereço: ${SELLER_INFO.address}`);
-        if (SELLER_INFO.city) {
-            doc.text(`Cidade: ${SELLER_INFO.city}`);
-        }
-
-        section("Comprador");
-        doc.text(`Nome: ${client.nome || "-"}`);
-        doc.text(`CPF: ${client.cpf || "-"}`);
-        doc.text(`RG: ${client.rg || "-"}`);
-        doc.text(`CNH: ${client.cnh || "-"}`);
-        doc.text(`Endereço: ${client.endereco || "-"}`);
-
-        section("Veículo");
-        doc.text(`Placa: ${operation.placa || "-"}`);
-        doc.text(`Modelo: ${operation.modelo || operation.veiculo || "-"}`);
-        doc.text(`Ano: ${vehicleYears || "-"}`);
-        doc.text(`Cor: ${operation.cor || "-"}`);
-        doc.text(`Chassi: ${operation.chassi || "-"}`);
-        doc.text(`Renavam: ${operation.renavan || "-"}`);
-
-        section("Valores");
-        doc.text(
-            `Valor da venda: ${formatCurrencyBR(operation.valorVenda || 0)}`
-        );
-        doc.text(
-            `Custos extras (venda): ${formatCurrencyBR(
-                operation.custosExtras || 0
-            )}`
-        );
-        doc.text(
-            `Valor investido na compra: ${formatCurrencyBR(
-                operation.valorCompra || 0
-            )}`
-        );
-        doc.text(`Observações importantes: ${operation.observacoes || "-"}`);
-
-        doc.moveDown();
-        doc.text(
-            "O comprador declara ter vistoriado o veículo e aceita o estado em que se encontra, responsabilizando-se pelos custos e procedimentos de transferência."
-        );
-        doc.moveDown();
-        doc.text(
-            "Assinam as partes em duas vias de igual teor e forma, comprometendo-se com as cláusulas estabelecidas."
-        );
-
-        doc.moveDown(4);
-        doc.text("______________________________", { align: "center" });
-        doc.text("Vendedor", { align: "center" });
-        doc.moveDown(2);
-        doc.text("______________________________", { align: "center" });
-        doc.text("Comprador", { align: "center" });
-
-        doc.end();
+        res.send(buffer);
     } catch (error) {
         console.error(error);
         if (!res.headersSent) {

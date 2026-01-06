@@ -426,6 +426,34 @@ const populateSalePlateOptions = () => {
     if (shouldAutofill) {
         handleSaleClientChange();
     }
+    autofillClientFromPlate();
+};
+
+const normalizeName = (value) =>
+    value
+        ? value
+              .toString()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .toLowerCase()
+              .trim()
+        : "";
+
+const autofillClientFromPlate = () => {
+    const plateSelect = elements.salePlateSelect;
+    const clientSelect = elements.saleClientSelect;
+    if (!plateSelect || !clientSelect || !plateSelect.value) return;
+    const purchase = findPurchaseByPlate(plateSelect.value);
+    if (!purchase || !purchase.parceiro) return;
+    const normalizedPartner = normalizeName(purchase.parceiro);
+    if (!normalizedPartner) return;
+    const matchingOption = Array.from(clientSelect.options).find(
+        (option) => normalizeName(option.textContent) === normalizedPartner
+    );
+    if (matchingOption) {
+        clientSelect.value = matchingOption.value;
+        handleSaleClientChange();
+    }
 };
 const handleSaleClientChange = () => {
     const select = elements.saleClientSelect;
@@ -462,6 +490,7 @@ const handleSalePlateChange = () => {
                 : "";
     }
     saveFormDraft(elements.saleForm, FORM_DRAFT_KEYS.sale);
+    autofillClientFromPlate();
 };
 
 const vehicleFields = [
