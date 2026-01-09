@@ -123,7 +123,7 @@ const SELLER_INFO = {
     address: process.env.SELLER_ADDRESS || "Endereço não informado",
     city: process.env.SELLER_CITY || "",
 };
-const MAX_INSTALLMENTS = 12;
+const MAX_INSTALLMENTS = 20;
 const CONTRACT_TEMPLATE_PATH = path.join(
     __dirname,
     "logo e doc",

@@ -1,7 +1,7 @@
 const API_OPERATIONS = "/api/operations";
 const API_CLIENTS = "/api/clients";
 const API_CONTRACT = "/api/contracts/generate";
-const MAX_INSTALLMENTS = 12;
+const MAX_INSTALLMENTS = 20;
 
 const stateContract = {
     operations: [],
