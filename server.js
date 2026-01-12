@@ -52,6 +52,7 @@ db.exec(`
         placa TEXT,
         cidade TEXT,
         uf TEXT,
+        clientId TEXT,
         parceiro TEXT,
         contato TEXT,
         chassi TEXT,
@@ -81,6 +82,7 @@ ensureColumn("clients", "nacionalidade", "TEXT");
 ensureColumn("clients", "estadoCivil", "TEXT");
 ensureColumn("clients", "profissao", "TEXT");
 ensureColumn("operations", "combustivel", "TEXT");
+ensureColumn("operations", "clientId", "TEXT");
 
 app.use(cors());
 app.use(express.json());
@@ -323,12 +325,12 @@ app.post("/api/operations", (req, res) => {
     const insert = db.prepare(`
         INSERT INTO operations (
             id, tipo, data, veiculo, marca, modelo, cor, anoFabricacao, anoModelo,
-            placa, cidade, uf, parceiro, contato, chassi, renavan,
+            placa, cidade, uf, clientId, parceiro, contato, chassi, renavan,
             codigoCRVe, codigoCLAe, combustivel, codigoATPVe, valorCompra, valorVenda,
             custosExtras, observacoes
         ) VALUES (
             @id, @tipo, @data, @veiculo, @marca, @modelo, @cor, @anoFabricacao, @anoModelo,
-            @placa, @cidade, @uf, @parceiro, @contato, @chassi, @renavan,
+            @placa, @cidade, @uf, @clientId, @parceiro, @contato, @chassi, @renavan,
             @codigoCRVe, @codigoCLAe, @combustivel, @codigoATPVe, @valorCompra, @valorVenda,
             @custosExtras, @observacoes
         )
@@ -354,6 +356,7 @@ app.put("/api/operations/:id", (req, res) => {
             placa=@placa,
             cidade=@cidade,
             uf=@uf,
+            clientId=@clientId,
             parceiro=@parceiro,
             contato=@contato,
             chassi=@chassi,
@@ -443,6 +446,13 @@ app.post("/api/contracts/generate", (req, res) => {
             installments: rawInstallments,
             paymentType: rawPaymentType,
             entryValue: rawEntryValue,
+            dueDay: rawDueDay,
+            firstDueDate,
+            lastDueDate,
+            witness1Name,
+            witness1Cpf,
+            witness2Name,
+            witness2Cpf,
         } = req.body || {};
         if (!operationId || !clientId) {
             return res
@@ -485,20 +495,43 @@ app.post("/api/contracts/generate", (req, res) => {
             financedValue = 0;
             installmentValue = saleValue;
         }
+        const dueDayValue = Number(rawDueDay);
+        const dueDayText =
+            Number.isFinite(dueDayValue) && dueDayValue >= 1 && dueDayValue <= 31
+                ? `dia ${String(dueDayValue).padStart(2, "0")}`
+                : "dia a definir";
+        const firstDueText = firstDueDate
+            ? formatDateBR(firstDueDate)
+            : "data a definir";
+        const lastDueText = lastDueDate
+            ? formatDateBR(lastDueDate)
+            : "data a definir";
         const paymentClause =
             paymentType === "parcelado"
-                ? `${
-                      entryValue > 0
-                          ? `com um valor de entrada equivalente a ${formatCurrencyBR(
-                                entryValue
-                            )}, e `
-                          : ""
-                  }em ${installments} parcela(s) mensal(is), igual(is) e sucessiva(s) de ${formatCurrencyBR(
-                      installmentValue
-                  )} (${numberToCurrencyWords(
-                      installmentValue
-                  )}), a ser(em) paga(s) até o dia (inserir dia) de cada mês, ou dia útil seguinte, vencendo a primeira em (data) e a última em (data).`
+                ? `${entryValue > 0 ? `com um valor de entrada equivalente a ${formatCurrencyBR(entryValue)}, e ` : ""}em ${installments} parcela(s) mensal(is), igual(is) e sucessiva(s) de ${formatCurrencyBR(installmentValue)} (${numberToCurrencyWords(installmentValue)}), a ser(em) paga(s) até o ${dueDayText} de cada mês, ou dia útil seguinte, vencendo a primeira em ${firstDueText} e a última em ${lastDueText}.`
                 : "na forma de pagamento à vista.";
+        const safeWitness1Name = (witness1Name || "").toString().trim();
+        const safeWitness2Name = (witness2Name || "").toString().trim();
+        const safeWitness1Cpf = witness1Cpf || "";
+        const safeWitness2Cpf = witness2Cpf || "";
+        const witnessTemplateData = {
+            testemunha1_nome: safeWitness1Name,
+            testemunha1_cpf: formatCpf(safeWitness1Cpf),
+            testemunha_1_nome: safeWitness1Name,
+            testemunha_1_cpf: formatCpf(safeWitness1Cpf),
+            nome_testemunha1: safeWitness1Name,
+            cpf_testemunha1: formatCpf(safeWitness1Cpf),
+            nome_testemunha_1: safeWitness1Name,
+            cpf_testemunha_1: formatCpf(safeWitness1Cpf),
+            testemunha2_nome: safeWitness2Name,
+            testemunha2_cpf: formatCpf(safeWitness2Cpf),
+            testemunha_2_nome: safeWitness2Name,
+            testemunha_2_cpf: formatCpf(safeWitness2Cpf),
+            nome_testemunha2: safeWitness2Name,
+            cpf_testemunha2: formatCpf(safeWitness2Cpf),
+            nome_testemunha_2: safeWitness2Name,
+            cpf_testemunha_2: formatCpf(safeWitness2Cpf),
+        };
 
         let templateBinary;
         try {
@@ -570,6 +603,7 @@ app.post("/api/contracts/generate", (req, res) => {
                 "Combustível",
                 operation.combustivel
             ),
+            ...witnessTemplateData,
         });
 
         try {

@@ -40,12 +40,11 @@
 
             <section class="card">
                 <div class="card-header">
-                    <h2>Selecione as informações</h2>
-                    <p>Escolha uma venda registrada e o comprador correspondente para gerar o documento.</p>
+                    <h2>Novo Contrato</h2>
                 </div>
                 <form id="contract-form" class="form-grid">
                     <label>
-                        Venda (placa / modelo / valor)
+                        Veículo (placa / modelo / valor)
                         <select name="operationId" id="contract-operation" required>
                             <option value="">Carregando vendas...</option>
                         </select>
@@ -76,7 +75,7 @@
                         </label>
                     </div>
                     <label class="contract-installments" data-contract-section="installments">
-                        Quantidade de parcelas
+                        Número de Parcelas
                         <div class="installment-row">
                             <select name="installments" id="contract-installments" required>
                                 <option value="1">1x</option>
@@ -109,6 +108,32 @@
                         Valor total
                         <input type="text" id="contract-total-value" readonly>
                     </label>
+                    <div class="contract-due-row" data-contract-section="due-details">
+                        <label>
+                            Dia do vencimento
+                            <input type="number" id="contract-due-day" name="dueDay" min="1" max="31" placeholder="Ex.: 10">
+                        </label>
+                        <label>
+                            1ª parcela
+                            <input type="date" id="contract-first-due" name="firstDue">
+                        </label>
+                    </div>
+                    <label>
+                        Nome da Testemunha 1
+                        <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
+                    </label>
+                    <label>
+                        CPF da Testemunha 1
+                        <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
+                    </label>
+                    <label>
+                        Nome da Testemunha 2
+                        <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
+                    </label>
+                    <label>
+                        CPF da Testemunha 2
+                        <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
+                    </label>
                     <div class="form-actions">
                         <button type="submit">Gerar contrato</button>
                     </div>
@@ -118,7 +143,6 @@
             <section class="card card-history contract-preview" id="contract-preview">
                 <div class="card-header">
                     <h2>Pré-visualização dos dados</h2>
-                    <p>Confirme se as informações abaixo estão corretas antes de gerar o documento.</p>
                 </div>
                 <div class="preview-grid" id="preview-content">
                     <p>Selecione uma venda e um cliente para visualizar os detalhes.</p>

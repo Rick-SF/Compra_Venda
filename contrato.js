@@ -8,6 +8,11 @@ const stateContract = {
     clients: [],
 };
 
+const getClientById = (id) => {
+    if (!id) return null;
+    return stateContract.clients.find((client) => client.id === id) || null;
+};
+
 const contractElements = {
     form: document.getElementById("contract-form"),
     operationSelect: document.getElementById("contract-operation"),
@@ -23,6 +28,13 @@ const contractElements = {
         "[data-contract-section='installments']"
     ),
     totalWrapper: document.querySelector("[data-contract-section='total']"),
+    dueWrapper: document.querySelector("[data-contract-section='due-details']"),
+    dueDayInput: document.getElementById("contract-due-day"),
+    firstDueInput: document.getElementById("contract-first-due"),
+    witness1Name: document.getElementById("contract-witness1-name"),
+    witness1Cpf: document.getElementById("contract-witness1-cpf"),
+    witness2Name: document.getElementById("contract-witness2-name"),
+    witness2Cpf: document.getElementById("contract-witness2-cpf"),
 };
 
 const toastContract = document.getElementById("toast");
@@ -89,6 +101,39 @@ const clampInstallmentsValue = (value) => {
 const getPaymentType = () =>
     contractElements.paymentType?.value === "parcelado" ? "parcelado" : "vista";
 
+const stripNonDigits = (value) =>
+    value ? value.toString().replace(/\D/g, "") : "";
+
+const formatCpfDisplay = (value) => {
+    const digits = stripNonDigits(value).slice(0, 11);
+    if (!digits) return "";
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6)
+        return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9)
+        return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+        6,
+        9
+    )}-${digits.slice(9, 11)}`;
+};
+
+const getWitnessData = () => ({
+    witness1Name: contractElements.witness1Name?.value.trim() || "",
+    witness1Cpf: stripNonDigits(contractElements.witness1Cpf?.value || ""),
+    witness2Name: contractElements.witness2Name?.value.trim() || "",
+    witness2Cpf: stripNonDigits(contractElements.witness2Cpf?.value || ""),
+});
+
+const attachCpfMask = (input) => {
+    if (!input) return;
+    const handler = () => {
+        input.value = formatCpfDisplay(input.value);
+    };
+    input.addEventListener("input", handler);
+    handler();
+};
+
 const loadOperations = async () => {
     const response = await fetch(API_OPERATIONS);
     if (!response.ok) throw new Error("Erro ao carregar vendas");
@@ -112,7 +157,7 @@ const populateOperationSelect = () => {
     if (!stateContract.operations.length) {
         select.disabled = true;
         select.innerHTML =
-            '<option value="">Cadastre uma venda antes de gerar o contrato</option>';
+            '<option value="">Cadastre uma venda</option>';
         return;
     }
     select.disabled = false;
@@ -131,7 +176,9 @@ const populateOperationSelect = () => {
         ];
         option.value = value;
         option.textContent = labelParts.join(" • ");
-        option.dataset.partner = operation.parceiro || "";
+        const partnerName =
+            getClientById(operation.clientId)?.nome || operation.parceiro || "";
+        option.dataset.partner = partnerName;
         select.appendChild(option);
     });
 };
@@ -143,7 +190,7 @@ const populateClientSelect = () => {
     if (!stateContract.clients.length) {
         select.disabled = true;
         select.innerHTML =
-            '<option value="">Cadastre um cliente para gerar contratos</option>';
+            '<option value="">Cadastre um cliente</option>';
         return;
     }
     select.disabled = false;
@@ -179,7 +226,16 @@ const autofillClient = () => {
         (operation) => operation.id === operationSelect.value
     );
     if (!selectedOperation) return;
-    const partnerName = normalizeText(selectedOperation.parceiro);
+    if (selectedOperation.clientId) {
+        const clientExists = getClientById(selectedOperation.clientId);
+        if (clientExists) {
+            clientSelect.value = selectedOperation.clientId;
+            return;
+        }
+    }
+    const partnerName = normalizeText(
+        selectedOperation.parceiro || ""
+    );
     if (!partnerName) return;
 
     const matchingOption = Array.from(clientSelect.options).find(
@@ -233,6 +289,31 @@ const getInstallmentValue = () => {
 const toggleSection = (element, visible) => {
     if (!element) return;
     element.classList.toggle("is-hidden", !visible);
+};
+
+const getDueDayValue = () => {
+    const value = Number(contractElements.dueDayInput?.value);
+    if (!Number.isFinite(value)) return "";
+    if (value < 1 || value > 31) return "";
+    return value;
+};
+
+const getDueDateValue = (input) => {
+    const value = input?.value?.trim();
+    if (!value) return "";
+    return value;
+};
+
+const addMonthsToDate = (isoDate, months) => {
+    if (!isoDate) return "";
+    const [year, month, day] = isoDate.split("-").map(Number);
+    if (!year || !month || !day) return isoDate;
+    const baseDate = new Date(year, month - 1, day);
+    baseDate.setMonth(baseDate.getMonth() + months);
+    const resultYear = baseDate.getFullYear();
+    const resultMonth = String(baseDate.getMonth() + 1).padStart(2, "0");
+    const resultDay = String(baseDate.getDate()).padStart(2, "0");
+    return `${resultYear}-${resultMonth}-${resultDay}`;
 };
 
 const updateInstallmentNote = () => {
@@ -338,6 +419,7 @@ const updatePaymentFieldState = () => {
     }
     toggleSection(contractElements.installmentsWrapper, paymentType === "parcelado");
     toggleSection(contractElements.totalWrapper, paymentType === "parcelado");
+    toggleSection(contractElements.dueWrapper, paymentType === "parcelado");
     updateTotalField();
     updateInstallmentOptions();
 };
@@ -362,10 +444,37 @@ const renderPreview = () => {
     const installments = getSelectedInstallments() || 1;
     const installmentValue = getInstallmentValue();
     const financed = getFinancedValue();
+    const dueDayValue = getDueDayValue();
+    const firstDue = getDueDateValue(contractElements.firstDueInput);
+    const lastDue =
+        firstDue && installments > 0
+            ? addMonthsToDate(firstDue, installments - 1)
+            : "";
     const parcelLabel =
         paymentType === "parcelado"
             ? `${installments}x de ${formatCurrency(installmentValue)}`
             : "Pagamento à vista";
+    const {
+        witness1Name,
+        witness1Cpf,
+        witness2Name,
+        witness2Cpf,
+    } = getWitnessData();
+    const witnessDetails = [];
+    if (witness1Name || witness1Cpf) {
+        witnessDetails.push(
+            `<li><strong>Testemunha 1:</strong> ${
+                witness1Name || "-"
+            }${witness1Cpf ? ` — CPF: ${formatCpfDisplay(witness1Cpf)}` : ""}</li>`
+        );
+    }
+    if (witness2Name || witness2Cpf) {
+        witnessDetails.push(
+            `<li><strong>Testemunha 2:</strong> ${
+                witness2Name || "-"
+            }${witness2Cpf ? ` — CPF: ${formatCpfDisplay(witness2Cpf)}` : ""}</li>`
+        );
+    }
     container.innerHTML = `
         <div>
             <h3>Venda selecionada</h3>
@@ -382,9 +491,20 @@ const renderPreview = () => {
                 <li><strong>Parcelamento:</strong> ${parcelLabel}</li>
                 ${
                     paymentType === "parcelado"
-                        ? `<li><strong>Saldo parcelado:</strong> ${formatCurrency(
-                              financed
-                          )}</li>`
+                        ? `
+                            <li><strong>Saldo parcelado:</strong> ${formatCurrency(
+                                financed
+                            )}</li>
+                            <li><strong>Dia de vencimento:</strong> ${
+                                dueDayValue || "—"
+                            }</li>
+                            <li><strong>1ª parcela:</strong> ${
+                                firstDue ? formatDate(firstDue) : "—"
+                            }</li>
+                            <li><strong>Última parcela:</strong> ${
+                                lastDue ? formatDate(lastDue) : "—"
+                            }</li>
+                          `
                         : ""
                 }
             </ul>
@@ -399,6 +519,11 @@ const renderPreview = () => {
                 <li><strong>Endereço:</strong> ${client.endereco || "-"}</li>
             </ul>
         </div>
+        ${
+            witnessDetails.length
+                ? `<div><h3>Testemunhas</h3><ul>${witnessDetails.join("")}</ul></div>`
+                : ""
+        }
     `;
 };
 
@@ -448,6 +573,11 @@ const handleEntryBlur = () => {
     renderPreview();
 };
 
+const handleDueInputsChange = (event) => {
+    if (getPaymentType() !== "parcelado") return;
+    renderPreview();
+};
+
 const handleFormSubmit = async (event) => {
     event.preventDefault();
     const operationId = contractElements.operationSelect?.value;
@@ -455,6 +585,13 @@ const handleFormSubmit = async (event) => {
     const installments = getSelectedInstallments();
     const paymentType = getPaymentType();
     const entryValue = getEntryValue();
+    const dueDay = getDueDayValue();
+    const firstDueDate = getDueDateValue(contractElements.firstDueInput);
+    const lastDueDate =
+        firstDueDate && installments > 0
+            ? addMonthsToDate(firstDueDate, installments - 1)
+            : "";
+    const witnessData = getWitnessData();
     if (!operationId || !clientId) {
         showContractToast("Selecione uma venda e um cliente.", "error");
         return;
@@ -469,6 +606,10 @@ const handleFormSubmit = async (event) => {
                 installments,
                 paymentType,
                 entryValue,
+                dueDay,
+                firstDueDate,
+                lastDueDate,
+                ...witnessData,
             }),
         });
         if (!response.ok) {
@@ -526,7 +667,22 @@ const initContractPage = async () => {
     );
     contractElements.paymentValueInput?.addEventListener("input", handleEntryInput);
     contractElements.paymentValueInput?.addEventListener("blur", handleEntryBlur);
+    contractElements.dueDayInput?.addEventListener("input", handleDueInputsChange);
+    contractElements.firstDueInput?.addEventListener(
+        "change",
+        handleDueInputsChange
+    );
+    [
+        contractElements.witness1Name,
+        contractElements.witness1Cpf,
+        contractElements.witness2Name,
+        contractElements.witness2Cpf,
+    ].forEach((input) => {
+        input?.addEventListener("input", renderPreview);
+    });
     contractElements.form?.addEventListener("submit", handleFormSubmit);
 };
 
 document.addEventListener("DOMContentLoaded", initContractPage);
+    attachCpfMask(contractElements.witness1Cpf);
+    attachCpfMask(contractElements.witness2Cpf);

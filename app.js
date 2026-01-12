@@ -61,6 +61,25 @@ const formatPhoneDisplay = (value) => {
     return `(${ddd}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 };
 
+const getClientById = (id) => {
+    if (!id) return null;
+    return state.clients.find((client) => client.id === id) || null;
+};
+
+const getRecordClient = (record) =>
+    record && record.clientId ? getClientById(record.clientId) : null;
+
+const getRecordPartnerName = (record) => {
+    const client = getRecordClient(record);
+    return client?.nome || record?.parceiro || "";
+};
+
+const getRecordPartnerContact = (record) => {
+    const client = getRecordClient(record);
+    const contact = client?.contato || record?.contato || "";
+    return formatPhoneDisplay(contact);
+};
+
 const maskHandlers = {
     phone: (input) => {
         if (!input || input.dataset.maskAttached === "true") return;
@@ -337,13 +356,22 @@ const populateSaleClientOptions = () => {
     select.appendChild(placeholder);
     state.clients.forEach((client) => {
         const option = document.createElement("option");
-        option.value = client.nome || "";
+        const value = client.id || client.nome || "";
+        option.value = value;
         option.dataset.contact = stripNonDigits(client.contato || "");
         option.textContent = client.nome || "Cliente sem nome";
         select.appendChild(option);
     });
     if (previousValue) {
         select.value = previousValue;
+        if (select.value !== previousValue) {
+            const fallbackClient = state.clients.find(
+                (client) => (client.nome || "") === previousValue
+            );
+            if (fallbackClient) {
+                select.value = fallbackClient.id || "";
+            }
+        }
     }
     if (previousValue && select.value !== previousValue) {
         select.dataset.pendingValue = previousValue;
@@ -460,8 +488,10 @@ const handleSaleClientChange = () => {
     const contactInput = elements.saleContactInput;
     if (!select || !contactInput) return;
     const selectedOption = select.options[select.selectedIndex];
-    const contact = stripNonDigits(selectedOption?.dataset.contact || "");
-    contactInput.value = formatPhoneDisplay(contact);
+    const selectedClient = getClientById(select.value);
+    const fallback = stripNonDigits(selectedOption?.dataset.contact || "");
+    const contact = selectedClient?.contato || fallback;
+    contactInput.value = contact ? formatPhoneDisplay(contact) : "";
 };
 
 const handleSalePlateChange = () => {
@@ -577,14 +607,14 @@ const purchaseModalFields = [
 const saleModalFields = [
     { name: "data", label: "Data da Venda", type: "date", required: true },
     {
-        name: "parceiro",
+        name: "clientId",
         label: "Comprador",
         type: "select",
         required: true,
         placeholder: "Selecione um cliente",
         options: () =>
             state.clients.map((client) => ({
-                value: client.nome || "",
+                value: client.id || client.nome || "",
                 label: client.nome || "Cliente sem nome",
             })),
     },
@@ -679,6 +709,7 @@ const buildFieldMarkup = (field, value = "") => {
 
 const getPurchaseUpdatesFromForm = (data) => ({
     data: data.get("data"),
+    clientId: null,
     veiculo: data.get("veiculo")?.trim(),
     marca: data.get("marca")?.trim(),
     modelo: data.get("modelo")?.trim(),
@@ -699,18 +730,24 @@ const getPurchaseUpdatesFromForm = (data) => ({
     observacoes: data.get("observacoes")?.trim(),
 });
 
-const getSaleUpdatesFromForm = (data) => ({
-    data: data.get("data"),
-    parceiro: data.get("parceiro")?.trim(),
-    contato: stripNonDigits(data.get("contato")),
-    modelo: data.get("modelo")?.trim(),
-    placa: normalizePlate(data.get("placa")),
-    valorCompra: toNumber(data.get("valorCompra")),
-    codigoATPVe: data.get("codigoATPVe")?.trim(),
-    custosExtras: toNumber(data.get("custosExtras")),
-    valorVenda: toNumber(data.get("valorVenda")),
-    observacoes: data.get("observacoes")?.trim(),
-});
+const getSaleUpdatesFromForm = (data) => {
+    const rawClientId = data.get("clientId")?.trim() || "";
+    const normalizedClientId = rawClientId || null;
+    const client = getClientById(normalizedClientId);
+    return {
+        data: data.get("data"),
+        clientId: normalizedClientId,
+        parceiro: client?.nome || "",
+        contato: stripNonDigits(data.get("contato")),
+        modelo: data.get("modelo")?.trim(),
+        placa: normalizePlate(data.get("placa")),
+        valorCompra: toNumber(data.get("valorCompra")),
+        codigoATPVe: data.get("codigoATPVe")?.trim(),
+        custosExtras: toNumber(data.get("custosExtras")),
+        valorVenda: toNumber(data.get("valorVenda")),
+        observacoes: data.get("observacoes")?.trim(),
+    };
+};
 
 const normalizeISODate = (value) => {
     if (!value) return "";
@@ -775,9 +812,10 @@ const calculateProfit = (record) => {
 };
 
 const getContactCellContent = (record) => {
-    const contactDisplay = formatPhoneDisplay(record.contato);
+    const partnerName = getRecordPartnerName(record) || "-";
+    const contactDisplay = getRecordPartnerContact(record);
     return `
-        ${record.parceiro || "-"}
+        ${partnerName || "-"}
         ${
             contactDisplay
                 ? `<span class="contact">${contactDisplay}</span>`
@@ -1094,6 +1132,7 @@ const handlePurchaseSubmit = async (event) => {
         id: createId(),
         tipo: "Compra",
         data: data.get("data"),
+        clientId: null,
         veiculo: data.get("veiculo")?.trim(),
         marca: data.get("marca")?.trim(),
         modelo: data.get("modelo")?.trim(),
@@ -1121,6 +1160,9 @@ const handlePurchaseSubmit = async (event) => {
 const handleSaleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const rawClientId = data.get("clientId")?.trim();
+    const normalizedClientId = rawClientId || null;
+    const client = getClientById(normalizedClientId);
     const normalizedPlate = normalizePlate(data.get("placa"));
     if (!normalizedPlate) {
         showToast("Selecione uma placa válida.", "error");
@@ -1151,7 +1193,8 @@ const handleSaleSubmit = async (event) => {
         placa: normalizedPlate,
         cidade: "",
         uf: "",
-        parceiro: data.get("parceiro")?.trim(),
+        clientId: normalizedClientId,
+        parceiro: client?.nome || "",
         contato: stripNonDigits(data.get("contato")),
         chassi: "",
         renavan: "",

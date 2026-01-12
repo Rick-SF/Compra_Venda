@@ -232,8 +232,15 @@ body {
     grid-column: 1 / -1;
 }
 .contract-page .contract-installments.is-hidden,
-.contract-page .contract-total-field.is-hidden {
+.contract-page .contract-total-field.is-hidden,
+.contract-page .contract-due-row.is-hidden {
     display: none;
+}
+.contract-page .contract-due-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
 }
 .contract-page .installment-row {
     display: flex;

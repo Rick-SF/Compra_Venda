@@ -69,8 +69,27 @@ const createId = () =>
 
 const formatCurrency = (value) => currency.format(value || 0);
 const normalizeText = (value) => value?.toString().trim().toLowerCase() || "";
+const stripNonDigits = (value, limit) => {
+    const digits = value ? value.toString().replace(/\D/g, "") : "";
+    return typeof limit === "number" ? digits.slice(0, limit) : digits;
+};
+
 const normalizePlate = (value) =>
     value?.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
+
+const formatPhoneDisplay = (value) => {
+    const digits = stripNonDigits(value, 11);
+    if (!digits) return "";
+    const ddd = digits.slice(0, 2);
+    if (digits.length <= 2) return `(${digits}`;
+    if (digits.length <= 6) {
+        return `(${ddd}) ${digits.slice(2)}`;
+    }
+    if (digits.length <= 10) {
+        return `(${ddd}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return `(${ddd}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+};
 const vehicleFields = [
     "veiculo",
     "marca",
@@ -97,6 +116,25 @@ const ensureVehicleFields = (record = {}) => {
         }
     });
     return normalized;
+};
+
+const getClientById = (id) => {
+    if (!id) return null;
+    return state.clients.find((client) => client.id === id) || null;
+};
+
+const getRecordClient = (record) =>
+    record && record.clientId ? getClientById(record.clientId) : null;
+
+const getRecordPartnerName = (record) => {
+    const client = getRecordClient(record);
+    return client?.nome || record?.parceiro || "";
+};
+
+const getRecordPartnerContact = (record) => {
+    const client = getRecordClient(record);
+    const contact = client?.contato || record?.contato || "";
+    return formatPhoneDisplay(contact);
 };
 
 const normalizeISODate = (value) => {
@@ -167,9 +205,8 @@ const applyFilters = () => {
         const matchPlate = normalizedPlateFilter
             ? normalizePlate(record.placa) === normalizedPlateFilter
             : true;
-        const matchBuyer = comprador
-            ? (record.parceiro || "").toLowerCase().includes(comprador)
-            : true;
+        const buyerName = normalizeText(getRecordPartnerName(record));
+        const matchBuyer = comprador ? buyerName.includes(comprador) : true;
         const recordDateValue = normalizeISODate(record.data);
         if ((startValue || endValue) && !recordDateValue) {
             return false;
@@ -230,10 +267,10 @@ const renderTable = (records) => {
             <td>${record.uf || "—"}</td>
             <td>${record.placa || "—"}</td>
             <td>
-                ${record.parceiro || "—"}
+                ${getRecordPartnerName(record) || "—"}
                 ${
-                    record.contato
-                        ? `<span class="contact">${record.contato}</span>`
+                    getRecordPartnerContact(record)
+                        ? `<span class="contact">${getRecordPartnerContact(record)}</span>`
                         : ""
                 }
             </td>
@@ -442,7 +479,12 @@ const handleTableClick = (event) => {
 const init = async () => {
     try {
         const clients = await loadClients();
-        state.clients = Array.isArray(clients) ? clients : [];
+        state.clients = Array.isArray(clients)
+            ? clients.map((client) => ({
+                  ...client,
+                  contato: stripNonDigits(client.contato, 11),
+              }))
+            : [];
         populateClientFilter();
     } catch (error) {
         console.error(error);
