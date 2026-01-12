@@ -43,18 +43,20 @@
                     <h2>Novo Contrato</h2>
                 </div>
                 <form id="contract-form" class="form-grid">
-                    <label>
-                        Veículo (placa / modelo / valor)
-                        <select name="operationId" id="contract-operation" required>
-                            <option value="">Carregando vendas...</option>
-                        </select>
-                    </label>
-                    <label class="contract-client-field">
-                        Cliente
-                        <select name="clientId" id="contract-client" required>
-                            <option value="">Carregando clientes...</option>
-                        </select>
-                    </label>
+                    <div class="contract-primary-row">
+                        <label class="primary-field vehicle-field">
+                            Veículo (placa / modelo / valor)
+                            <select name="operationId" id="contract-operation" required>
+                                <option value="">Carregando vendas...</option>
+                            </select>
+                        </label>
+                        <label class="primary-field client-field">
+                            Cliente
+                            <select name="clientId" id="contract-client" required>
+                                <option value="">Carregando clientes...</option>
+                            </select>
+                        </label>
+                    </div>
                     <div class="contract-payment-row">
                         <label class="contract-payment-type">
                             Forma de pagamento
@@ -118,22 +120,26 @@
                             <input type="date" id="contract-first-due" name="firstDue">
                         </label>
                     </div>
-                    <label>
-                        Nome da Testemunha 1
-                        <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
-                    </label>
-                    <label>
-                        CPF da Testemunha 1
-                        <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
-                    </label>
-                    <label>
-                        Nome da Testemunha 2
-                        <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
-                    </label>
-                    <label>
-                        CPF da Testemunha 2
-                        <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
-                    </label>
+                    <div class="contract-witness-row">
+                        <label class="witness-field">
+                            Nome da Testemunha 1
+                            <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
+                        </label>
+                        <label class="witness-field">
+                            CPF da Testemunha 1
+                            <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
+                        </label>
+                    </div>
+                    <div class="contract-witness-row">
+                        <label class="witness-field">
+                            Nome da Testemunha 2
+                            <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
+                        </label>
+                        <label class="witness-field">
+                            CPF da Testemunha 2
+                            <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
+                        </label>
+                    </div>
                     <div class="form-actions">
                         <button type="submit">Gerar contrato</button>
                     </div>
