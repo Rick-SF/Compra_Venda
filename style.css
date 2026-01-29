@@ -191,87 +191,56 @@ body {
     margin: 0 auto;
 }
 
-.contract-page .contract-primary-row {
-    grid-column: 1 / -1;
+.contract-page .contract-shell .contract-header {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 1rem;
-    align-items: flex-end;
+    flex-direction: column;
+    gap: 0.4rem;
 }
-.contract-page .contract-primary-row .primary-field {
-    flex: 1 1 240px;
-    margin: 0;
+.contract-page .contract-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+.contract-page .contract-block {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.015);
+}
+.contract-page .contract-block header {
+    margin-bottom: 1rem;
+}
+.contract-page .contract-block header h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+.contract-page .contract-block .row {
+    gap: 1rem;
+}
+.contract-page .contract-block .row.two-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.contract-page .contract-block .row.single {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.contract-page .contract-block label {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     min-width: 0;
-}
-.contract-page .contract-primary-row .primary-field select {
-    width: 100%;
-}
-.contract-page .contract-primary-row .vehicle-field {
-    flex: 1 1 240px;
-    max-width: none;
-}
-.contract-page .contract-primary-row .client-field {
-    flex: 1 1 240px;
-}
-.contract-page .contract-payment-row {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-end;
-}
-.contract-page .contract-payment-row label {
-    flex: 1 1 240px;
-    margin: 0;
-}
-.contract-page label.contract-payment-type,
-.contract-page label.contract-payment-value {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-.contract-page label.contract-payment-value .field-title {
-    font-size: 0.85rem;
-    color: var(--muted);
-}
-.contract-page label.contract-payment-value input {
-    width: 100%;
-}
-.contract-page label.contract-installments {
-    grid-column: 1 / -1;
-}
-.contract-page label.contract-total-field {
-    grid-column: 1 / -1;
-}
-.contract-page .contract-installments.is-hidden,
-.contract-page .contract-total-field.is-hidden,
-.contract-page .contract-due-row.is-hidden {
-    display: none;
-}
-.contract-page .contract-due-row {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-.contract-page .contract-witness-row {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-.contract-page .contract-witness-row .witness-field {
-    flex: 1;
-    min-width: 220px;
 }
 .contract-page .installment-row {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
     align-items: center;
+}
+.contract-page .form-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 .contract-page .installment-row select {
     min-width: 160px;

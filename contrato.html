@@ -38,111 +38,142 @@
                 </p>
             </header>
 
-            <section class="card">
-                <div class="card-header">
-                    <h2>Novo Contrato</h2>
+            <section class="card contract-shell">
+                <div class="card-header contract-header">
+                    <h2>Gerar novo contrato</h2>
+                    <p class="helper-text">
+                        Escolha a venda, confirme o cliente e complete as regras de pagamento para emitir o arquivo.
+                    </p>
                 </div>
-                <form id="contract-form" class="form-grid">
-                    <div class="contract-primary-row">
-                        <label class="primary-field vehicle-field">
-                            Veículo (placa / modelo / valor)
-                            <select name="operationId" id="contract-operation" required>
-                                <option value="">Carregando vendas...</option>
-                            </select>
-                        </label>
-                        <label class="primary-field client-field">
-                            Cliente
-                            <select name="clientId" id="contract-client" required>
-                                <option value="">Carregando clientes...</option>
-                            </select>
-                        </label>
-                    </div>
-                    <div class="contract-payment-row">
-                        <label class="contract-payment-type">
-                            Forma de pagamento
-                            <select name="paymentType" id="contract-payment-type" required>
-                                <option value="vista">À vista</option>
-                                <option value="parcelado">Parcelado</option>
-                            </select>
-                        </label>
-                        <label class="contract-payment-value">
-                            <span class="field-title" id="payment-value-label">Valor total</span>
-                            <input
-                                type="text"
-                                id="contract-payment-value"
-                                name="paymentValue"
-                                placeholder="R$ 0,00"
-                                readonly
-                            >
-                        </label>
-                    </div>
-                    <label class="contract-installments" data-contract-section="installments">
-                        Número de Parcelas
-                        <div class="installment-row">
-                            <select name="installments" id="contract-installments" required>
-                                <option value="1">1x</option>
-                                <option value="2">2x</option>
-                                <option value="3">3x</option>
-                                <option value="4">4x</option>
-                                <option value="5">5x</option>
-                                <option value="6">6x</option>
-                                <option value="7">7x</option>
-                                <option value="8">8x</option>
-                                <option value="9">9x</option>
-                                <option value="10">10x</option>
-                                <option value="11">11x</option>
-                                <option value="12">12x</option>
-                                <option value="13">13x</option>
-                                <option value="14">14x</option>
-                                <option value="15">15x</option>
-                                <option value="16">16x</option>
-                                <option value="17">17x</option>
-                                <option value="18">18x</option>
-                                <option value="19">19x</option>
-                                <option value="20">20x</option>
-                            </select>
-                            <span class="installment-note" id="installment-note">
-                                Selecione uma venda para calcular.
-                            </span>
+                <form id="contract-form" class="contract-layout">
+                    <article class="contract-block">
+                        <header>
+                            <h3>Operação</h3>
+                            <p>Venda e cliente que participarão do documento.</p>
+                        </header>
+                        <div class="row two-cols">
+                            <label>
+                                Veículo (placa / modelo / valor)
+                                <select name="operationId" id="contract-operation" required>
+                                    <option value="">Carregando vendas...</option>
+                                </select>
+                            </label>
+                            <label>
+                                Cliente
+                                <select name="clientId" id="contract-client" required>
+                                    <option value="">Carregando clientes...</option>
+                                </select>
+                            </label>
                         </div>
-                    </label>
-                    <label class="contract-total-field" data-contract-section="total">
-                        Valor total
-                        <input type="text" id="contract-total-value" readonly>
-                    </label>
-                    <div class="contract-due-row" data-contract-section="due-details">
-                        <label>
-                            Dia do vencimento
-                            <input type="number" id="contract-due-day" name="dueDay" min="1" max="31" placeholder="Ex.: 10">
-                        </label>
-                        <label>
-                            1ª parcela
-                            <input type="date" id="contract-first-due" name="firstDue">
-                        </label>
-                    </div>
-                    <div class="contract-witness-row">
-                        <label class="witness-field">
-                            Nome da Testemunha 1
-                            <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
-                        </label>
-                        <label class="witness-field">
-                            CPF da Testemunha 1
-                            <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
-                        </label>
-                    </div>
-                    <div class="contract-witness-row">
-                        <label class="witness-field">
-                            Nome da Testemunha 2
-                            <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
-                        </label>
-                        <label class="witness-field">
-                            CPF da Testemunha 2
-                            <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
-                        </label>
-                    </div>
-                    <div class="form-actions">
+                    </article>
+
+                    <article class="contract-block">
+                        <header>
+                            <h3>Pagamento</h3>
+                            <p>Defina a modalidade e valores praticados.</p>
+                        </header>
+                        <div class="row two-cols">
+                            <label>
+                                Forma de pagamento
+                                <select name="paymentType" id="contract-payment-type" required>
+                                    <option value="vista">À vista</option>
+                                    <option value="parcelado">Parcelado</option>
+                                </select>
+                            </label>
+                            <label>
+                                Valor total / entrada
+                                <input
+                                    type="text"
+                                    id="contract-payment-value"
+                                    name="paymentValue"
+                                    placeholder="R$ 0,00"
+                                    readonly
+                                >
+                            </label>
+                        </div>
+                        <div class="row single">
+                            <label data-contract-section="installments">
+                                Número de parcelas
+                                <div class="installment-row">
+                                    <select name="installments" id="contract-installments" required>
+                                        <option value="1">1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="3">3x</option>
+                                        <option value="4">4x</option>
+                                        <option value="5">5x</option>
+                                        <option value="6">6x</option>
+                                        <option value="7">7x</option>
+                                        <option value="8">8x</option>
+                                        <option value="9">9x</option>
+                                        <option value="10">10x</option>
+                                        <option value="11">11x</option>
+                                        <option value="12">12x</option>
+                                        <option value="13">13x</option>
+                                        <option value="14">14x</option>
+                                        <option value="15">15x</option>
+                                        <option value="16">16x</option>
+                                        <option value="17">17x</option>
+                                        <option value="18">18x</option>
+                                        <option value="19">19x</option>
+                                        <option value="20">20x</option>
+                                    </select>
+                                    <span class="installment-note" id="installment-note">
+                                        Selecione uma venda para calcular.
+                                    </span>
+                                </div>
+                            </label>
+                            <label data-contract-section="total">
+                                Valor total calculado
+                                <input type="text" id="contract-total-value" readonly>
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="contract-block" data-contract-section="due-details">
+                        <header>
+                            <h3>Vencimentos</h3>
+                            <p>Informe o dia padrão e a data da primeira parcela.</p>
+                        </header>
+                        <div class="row two-cols">
+                            <label>
+                                Dia do vencimento
+                                <input type="number" id="contract-due-day" name="dueDay" min="1" max="31" placeholder="Ex.: 10">
+                            </label>
+                            <label>
+                                1ª parcela
+                                <input type="date" id="contract-first-due" name="firstDue">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="contract-block">
+                        <header>
+                            <h3>Testemunhas</h3>
+                            <p>Os dados serão posicionados automaticamente no contrato.</p>
+                        </header>
+                        <div class="row two-cols">
+                            <label>
+                                Nome da Testemunha 1
+                                <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
+                            </label>
+                            <label>
+                                CPF da Testemunha 1
+                                <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
+                            </label>
+                            <label>
+                                Nome da Testemunha 2
+                                <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
+                            </label>
+                            <label>
+                                CPF da Testemunha 2
+                                <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
+                            </label>
+                        </div>
+                    </article>
+
+                    <footer class="form-actions">
                         <button type="submit">Gerar contrato</button>
-                    </div>
+                    </footer>
                 </form>
             </section>
 
