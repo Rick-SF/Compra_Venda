@@ -828,3 +828,172 @@ body[data-page="vendas"] .actions-cell {
         padding: 0.75rem;
     }
 }
+
+/* == Contrato: novo layout == */
+.contract-page .contract-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 2rem;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(0, 145, 255, 0.25), rgba(15, 17, 41, 0.6));
+    margin-bottom: 2rem;
+}
+.contract-page .contract-hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+.contract-page .contract-hero h1 {
+    font-size: 2rem;
+    margin: 0.35rem 0 0.5rem;
+}
+.contract-page .contract-hero .hero-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    text-align: right;
+    color: var(--muted);
+}
+.contract-page .contract-progress {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.contract-page .contract-progress .progress-step {
+    flex: 1;
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+}
+.contract-page .contract-progress .progress-step span {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(0, 145, 255, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+.contract-page .contract-progress .progress-step.active {
+    border-color: rgba(0, 145, 255, 0.45);
+    background: rgba(0, 145, 255, 0.08);
+}
+.contract-page .contract-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 1.5rem;
+}
+.contract-page .contract-flow-v2 {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.contract-page .form-panel {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 1.5rem;
+    background: rgba(10, 12, 32, 0.95);
+}
+.contract-page .step-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.contract-page .step-header .step-index {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(0, 145, 255, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+.contract-page .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+.contract-page .field-grid.two {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.contract-page .field-grid.three {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.contract-page .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+.contract-page .installment-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+.contract-page .installment-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+.contract-page .form-actions.compact {
+    display: flex;
+    justify-content: flex-end;
+}
+.contract-page .contract-sidepanel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.contract-page .side-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 1.25rem;
+    background: rgba(6, 8, 26, 0.95);
+}
+.contract-page .side-card h3 {
+    margin-bottom: 0.5rem;
+}
+.contract-page .side-card dl {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+}
+.contract-page .side-card dl div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.contract-page .side-card dl dd {
+    margin: 0;
+    color: #fff;
+}
+.contract-page .preview-card {
+    padding: 0;
+}
+.contract-page .preview-card .card-header {
+    padding: 1.25rem 1.25rem 0;
+}
+.contract-page .preview-card .preview-grid {
+    padding: 1.25rem;
+}
+.contract-page .contract-preview ul {
+    list-style: none;
+    padding: 0;
+}
+.contract-page .contract-preview ul li + li {
+    margin-top: 0.3rem;
+}
+.contract-page .contract-preview h3 {
+    margin: 0;
+}

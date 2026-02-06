@@ -31,34 +31,53 @@
                 <button class="nav-link button-link" type="button" data-logout>Sair</button>
             </nav>
 
-            <header class="page-header">
-                <h1>Formulário de Contrato</h1>
-                <p class="lead">
-                    O formulário será preenchido automaticamente com os dados da venda e cliente após seleção.
-                </p>
-            </header>
-
-            <section class="card contract-shell">
-                <div class="card-header contract-header">
-                    <h2>Gerar novo contrato</h2>
-                    <p class="helper-text">
-                        Escolha a venda, confirme o cliente e complete as regras de pagamento para emitir o arquivo.
+            <header class="contract-hero">
+                <div>
+                    <p class="eyebrow">Contrato digital</p>
+                    <h1>Monte o documento em três etapas rápidas</h1>
+                    <p class="lead">
+                        Revise os dados da operação, configure as condições de pagamento e exporte o arquivo assinado.
                     </p>
                 </div>
-                <form id="contract-form" class="contract-layout">
-                    <article class="contract-block">
-                        <header>
-                            <h3>Operação</h3>
-                            <p>Venda e cliente que participarão do documento.</p>
-                        </header>
-                        <div class="row two-cols">
-                            <label>
+                <div class="hero-meta">
+                    <span data-summary="count">0 operações carregadas</span>
+                    <span data-summary="selected-client">Cliente não selecionado</span>
+                </div>
+            </header>
+
+            <section class="contract-progress">
+                <div class="progress-step active">
+                    <span>1</span>
+                    <p>Seleção da venda</p>
+                </div>
+                <div class="progress-step">
+                    <span>2</span>
+                    <p>Pagamento e vencimentos</p>
+                </div>
+                <div class="progress-step">
+                    <span>3</span>
+                    <p>Testemunhas e geração</p>
+                </div>
+            </section>
+
+            <section class="contract-workspace">
+                <form id="contract-form" class="contract-flow-v2">
+                    <article class="form-panel">
+                        <div class="step-header">
+                            <span class="step-index">01</span>
+                            <div>
+                                <h3>Dados da operação</h3>
+                                <p>Placa/comprador que constarão no contrato.</p>
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <label class="field">
                                 Veículo (placa / modelo / valor)
                                 <select name="operationId" id="contract-operation" required>
                                     <option value="">Carregando vendas...</option>
                                 </select>
                             </label>
-                            <label>
+                            <label class="field">
                                 Cliente
                                 <select name="clientId" id="contract-client" required>
                                     <option value="">Carregando clientes...</option>
@@ -67,20 +86,23 @@
                         </div>
                     </article>
 
-                    <article class="contract-block">
-                        <header>
-                            <h3>Pagamento</h3>
-                            <p>Defina a modalidade e valores praticados.</p>
-                        </header>
-                        <div class="row two-cols">
-                            <label>
+                    <article class="form-panel">
+                        <div class="step-header">
+                            <span class="step-index">02</span>
+                            <div>
+                                <h3>Pagamento e vencimentos</h3>
+                                <p>Personalize as condições financeiras.</p>
+                            </div>
+                        </div>
+                        <div class="field-grid three">
+                            <label class="field">
                                 Forma de pagamento
                                 <select name="paymentType" id="contract-payment-type" required>
                                     <option value="vista">À vista</option>
                                     <option value="parcelado">Parcelado</option>
                                 </select>
                             </label>
-                            <label>
+                            <label class="field">
                                 Valor total / entrada
                                 <input
                                     type="text"
@@ -90,9 +112,13 @@
                                     readonly
                                 >
                             </label>
+                            <label class="field" data-contract-section="total">
+                                Valor total calculado
+                                <input type="text" id="contract-total-value" readonly>
+                            </label>
                         </div>
-                        <div class="row single">
-                            <label data-contract-section="installments">
+                        <div class="field-grid two">
+                            <label class="field" data-contract-section="installments">
                                 Número de parcelas
                                 <div class="installment-row">
                                     <select name="installments" id="contract-installments" required>
@@ -122,68 +148,77 @@
                                     </span>
                                 </div>
                             </label>
-                            <label data-contract-section="total">
-                                Valor total calculado
-                                <input type="text" id="contract-total-value" readonly>
-                            </label>
-                        </div>
-                    </article>
-
-                    <article class="contract-block" data-contract-section="due-details">
-                        <header>
-                            <h3>Vencimentos</h3>
-                            <p>Informe o dia padrão e a data da primeira parcela.</p>
-                        </header>
-                        <div class="row two-cols">
-                            <label>
+                            <label class="field" data-contract-section="due-details">
                                 Dia do vencimento
                                 <input type="number" id="contract-due-day" name="dueDay" min="1" max="31" placeholder="Ex.: 10">
                             </label>
-                            <label>
+                            <label class="field" data-contract-section="due-details">
                                 1ª parcela
                                 <input type="date" id="contract-first-due" name="firstDue">
                             </label>
                         </div>
                     </article>
 
-                    <article class="contract-block">
-                        <header>
-                            <h3>Testemunhas</h3>
-                            <p>Os dados serão posicionados automaticamente no contrato.</p>
-                        </header>
-                        <div class="row two-cols">
-                            <label>
+                    <article class="form-panel">
+                        <div class="step-header">
+                            <span class="step-index">03</span>
+                            <div>
+                                <h3>Testemunhas</h3>
+                                <p>Os nomes aparecerão na área de assinatura.</p>
+                            </div>
+                        </div>
+                        <div class="field-grid two">
+                            <label class="field">
                                 Nome da Testemunha 1
                                 <input type="text" id="contract-witness1-name" name="witness1Name" placeholder="Nome completo">
                             </label>
-                            <label>
+                            <label class="field">
                                 CPF da Testemunha 1
                                 <input type="text" id="contract-witness1-cpf" name="witness1Cpf" placeholder="000.000.000-00">
                             </label>
-                            <label>
+                            <label class="field">
                                 Nome da Testemunha 2
                                 <input type="text" id="contract-witness2-name" name="witness2Name" placeholder="Nome completo">
                             </label>
-                            <label>
+                            <label class="field">
                                 CPF da Testemunha 2
                                 <input type="text" id="contract-witness2-cpf" name="witness2Cpf" placeholder="000.000.000-00">
                             </label>
                         </div>
                     </article>
 
-                    <footer class="form-actions">
+                    <div class="form-actions compact">
                         <button type="submit">Gerar contrato</button>
-                    </footer>
+                    </div>
                 </form>
-            </section>
 
-            <section class="card card-history contract-preview" id="contract-preview">
-                <div class="card-header">
-                    <h2>Pré-visualização dos dados</h2>
-                </div>
-                <div class="preview-grid" id="preview-content">
-                    <p>Selecione uma venda e um cliente para visualizar os detalhes.</p>
-                </div>
+                <aside class="contract-sidepanel">
+                    <div class="side-card">
+                        <h3>Resumo da seleção</h3>
+                        <dl>
+                            <div>
+                                <dt>Veículo</dt>
+                                <dd data-preview="vehicle">-</dd>
+                            </div>
+                            <div>
+                                <dt>Cliente</dt>
+                                <dd data-preview="client">-</dd>
+                            </div>
+                            <div>
+                                <dt>Valor total</dt>
+                                <dd data-preview="total">R$ 0,00</dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div class="side-card preview-card" id="contract-preview">
+                        <div class="card-header">
+                            <h3>Pré-visualização</h3>
+                        </div>
+                        <div class="preview-grid" id="preview-content">
+                            <p>Selecione uma venda e um cliente para visualizar os detalhes.</p>
+                        </div>
+                    </div>
+                </aside>
             </section>
         </div>
 
