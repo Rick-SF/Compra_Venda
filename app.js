@@ -536,6 +536,7 @@ const vehicleFields = [
     "codigoCRVe",
     "codigoCLAe",
     "combustivel",
+    "quilometragem",
     "codigoATPVe",
 ];
 
@@ -552,6 +553,7 @@ const purchaseDetailFields = [
     "codigoCRVe",
     "codigoCLAe",
     "combustivel",
+    "quilometragem",
 ];
 
 const ensureVehicleFields = (record = {}) => {
@@ -599,6 +601,7 @@ const purchaseModalFields = [
             "Híbrido",
         ],
     },
+    { name: "quilometragem", label: "Quilometragem", type: "text", required: true },
     { name: "valorCompra", label: "Valor da Compra (R$)", type: "text", required: true, mask: "currency" },
     { name: "custosExtras", label: "Custos Extras (R$)", type: "text", mask: "currency" },
     { name: "observacoes", label: "Observações", type: "textarea" },
@@ -725,6 +728,7 @@ const getPurchaseUpdatesFromForm = (data) => ({
     codigoCRVe: data.get("codigoCRVe")?.trim(),
     codigoCLAe: data.get("codigoCLAe")?.trim(),
     combustivel: data.get("combustivel")?.trim(),
+    quilometragem: data.get("quilometragem")?.trim(),
     valorCompra: toNumber(data.get("valorCompra")),
     custosExtras: toNumber(data.get("custosExtras")),
     observacoes: data.get("observacoes")?.trim(),
@@ -845,6 +849,7 @@ const columnRenderers = {
     codigoCRVe: (record) => `<td>${record.codigoCRVe || "-"}</td>`,
     codigoCLAe: (record) => `<td>${record.codigoCLAe || "-"}</td>`,
     combustivel: (record) => `<td>${record.combustivel || "-"}</td>`,
+    quilometragem: (record) => `<td>${record.quilometragem || "-"}</td>`,
     codigoATPVe: (record) => `<td>${record.codigoATPVe || "-"}</td>`,
     valorCompra: (record) => {
         const value = record.valorCompra ? formatCurrency(record.valorCompra) : "-";
@@ -896,6 +901,7 @@ const TABLE_COLUMNS = {
         "codigoCRVe",
         "codigoCLAe",
         "combustivel",
+        "quilometragem",
         "valorCompra",
         "observacoes",
         "actions",
@@ -913,6 +919,7 @@ const TABLE_COLUMNS = {
         "uf",
         "placa",
         "contraparte",
+        "quilometragem",
         "codigoATPVe",
         "valorVenda",
         "observacoes",
@@ -1148,6 +1155,7 @@ const handlePurchaseSubmit = async (event) => {
         codigoCRVe: data.get("codigoCRVe")?.trim(),
         codigoCLAe: data.get("codigoCLAe")?.trim(),
         combustivel: data.get("combustivel")?.trim(),
+        quilometragem: data.get("quilometragem")?.trim(),
         contato: "",
         valorCompra: toNumber(data.get("valorCompra")),
         valorVenda: 0,

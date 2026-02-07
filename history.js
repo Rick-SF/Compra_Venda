@@ -103,6 +103,7 @@ const vehicleFields = [
     "codigoCRVe",
     "codigoCLAe",
     "combustivel",
+    "quilometragem",
     "codigoATPVe",
 ];
 const ensureVehicleFields = (record = {}) => {
@@ -236,7 +237,7 @@ const renderTable = (records) => {
 
     if (!records.length) {
         tbody.innerHTML =
-            '<tr class="placeholder"><td colspan="23">Nenhuma operação encontrada para o filtro informado.</td></tr>';
+            '<tr class="placeholder"><td colspan="24">Nenhuma operação encontrada para o filtro informado.</td></tr>';
         return;
     }
 
@@ -279,6 +280,7 @@ const renderTable = (records) => {
             <td>${record.codigoCRVe || "—"}</td>
             <td>${record.codigoCLAe || "—"}</td>
             <td>${record.combustivel || "—"}</td>
+            <td>${record.quilometragem || "—"}</td>
             <td>${record.codigoATPVe || "—"}</td>
             <td>
                 ${record.valorCompra ? formatCurrency(record.valorCompra) : "—"}

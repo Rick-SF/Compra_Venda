@@ -351,10 +351,15 @@ select:focus {
     border-color: rgba(88, 166, 255, 0.4);
 }
 
-#contract-operation {
-    width: calc(100% + 80px); /* ou o valor que precisar */
-    max-width: none;
+.contract-page .field .vehicle-select {
+    width: 100%;
+    max-width: 100%;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.65rem 2.5rem 0.65rem 0.85rem;
 }
+
 
 input[type="number"] {
     -moz-appearance: textfield;

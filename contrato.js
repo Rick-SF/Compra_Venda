@@ -482,6 +482,7 @@ const renderPreview = () => {
                 <li><strong>Data:</strong> ${formatDate(operation.data)}</li>
                 <li><strong>Placa:</strong> ${operation.placa || "-"}</li>
                 <li><strong>Modelo:</strong> ${operation.modelo || operation.veiculo || "-"}</li>
+                <li><strong>Quilometragem:</strong> ${operation.quilometragem || "-"}</li>
                 <li><strong>Valor da venda:</strong> ${formatCurrency(operation.valorVenda || 0)}</li>
                 <li><strong>Valor da compra:</strong> ${formatCurrency(operation.valorCompra || 0)}</li>
                 <li><strong>Forma de pagamento:</strong> ${

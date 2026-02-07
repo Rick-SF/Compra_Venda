@@ -115,6 +115,10 @@
                             </select>
                         </label>
                         <label>
+                            Quilometragem
+                            <input type="text" name="quilometragem" placeholder="Ex.: 48.500 km" required>
+                        </label>
+                        <label>
                             Valor da Compra (R$)
                             <input type="text" name="valorCompra" required data-mask="currency" placeholder="R$1.000,00">
                         </label>
@@ -162,6 +166,7 @@
                                 <th>Código CRVe</th>
                                 <th>Código CLAe</th>
                                 <th>Combustível</th>
+                                <th>Quilometragem</th>
                                 <th>Valor Compra</th>
                                 <th>Observações</th>
                                 <th>Ações</th>
@@ -169,7 +174,7 @@
                         </thead>
                         <tbody id="transactions-body">
                             <tr class="placeholder">
-                                <td colspan="20">Nenhuma operação cadastrada ainda.</td>
+                                <td colspan="21">Nenhuma operação cadastrada ainda.</td>
                             </tr>
                         </tbody>
                     </table>

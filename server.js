@@ -57,12 +57,13 @@ db.exec(`
         contato TEXT,
         chassi TEXT,
         renavan TEXT,
-    codigoCRVe TEXT,
-    codigoCLAe TEXT,
-    combustivel TEXT,
-    codigoATPVe TEXT,
-    valorCompra REAL,
-    valorVenda REAL,
+        codigoCRVe TEXT,
+        codigoCLAe TEXT,
+        combustivel TEXT,
+        quilometragem TEXT,
+        codigoATPVe TEXT,
+        valorCompra REAL,
+        valorVenda REAL,
         custosExtras REAL,
         observacoes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +83,7 @@ ensureColumn("clients", "nacionalidade", "TEXT");
 ensureColumn("clients", "estadoCivil", "TEXT");
 ensureColumn("clients", "profissao", "TEXT");
 ensureColumn("operations", "combustivel", "TEXT");
+ensureColumn("operations", "quilometragem", "TEXT");
 ensureColumn("operations", "clientId", "TEXT");
 
 app.use(cors());
@@ -96,6 +98,7 @@ const mapOperationRow = (row) => ({
     valorVenda: row.valorVenda ?? 0,
     custosExtras: row.custosExtras ?? 0,
     combustivel: row.combustivel || "",
+    quilometragem: row.quilometragem || "",
 });
 
 const formatCurrencyBR = (value) =>
@@ -326,12 +329,12 @@ app.post("/api/operations", (req, res) => {
         INSERT INTO operations (
             id, tipo, data, veiculo, marca, modelo, cor, anoFabricacao, anoModelo,
             placa, cidade, uf, clientId, parceiro, contato, chassi, renavan,
-            codigoCRVe, codigoCLAe, combustivel, codigoATPVe, valorCompra, valorVenda,
+            codigoCRVe, codigoCLAe, combustivel, quilometragem, codigoATPVe, valorCompra, valorVenda,
             custosExtras, observacoes
         ) VALUES (
             @id, @tipo, @data, @veiculo, @marca, @modelo, @cor, @anoFabricacao, @anoModelo,
             @placa, @cidade, @uf, @clientId, @parceiro, @contato, @chassi, @renavan,
-            @codigoCRVe, @codigoCLAe, @combustivel, @codigoATPVe, @valorCompra, @valorVenda,
+            @codigoCRVe, @codigoCLAe, @combustivel, @quilometragem, @codigoATPVe, @valorCompra, @valorVenda,
             @custosExtras, @observacoes
         )
     `);
@@ -364,6 +367,7 @@ app.put("/api/operations/:id", (req, res) => {
             codigoCRVe=@codigoCRVe,
             codigoCLAe=@codigoCLAe,
             combustivel=@combustivel,
+            quilometragem=@quilometragem,
             codigoATPVe=@codigoATPVe,
             valorCompra=@valorCompra,
             valorVenda=@valorVenda,
@@ -592,6 +596,10 @@ app.post("/api/contracts/generate", (req, res) => {
                 operation.modelo || operation.veiculo
             ),
             cor_veiculo: formatLabeledInfo("Cor", operation.cor),
+            quilometragem_veiculo: formatLabeledInfo(
+                "Quilometragem",
+                operation.quilometragem
+            ),
             ano_modelo_veiculo: formatLabeledInfo(
                 "Ano do modelo",
                 operation.anoModelo

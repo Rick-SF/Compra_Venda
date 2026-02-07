@@ -73,7 +73,7 @@
                         <div class="field-grid">
                             <label class="field">
                                 Veículo (placa / modelo / valor)
-                                <select name="operationId" id="contract-operation" required>
+                                <select name="operationId" id="contract-operation" class="vehicle-select" required>
                                     <option value="">Carregando vendas...</option>
                                 </select>
                             </label>
@@ -103,13 +103,12 @@
                                 </select>
                             </label>
                             <label class="field">
-                                Valor total / entrada
+                                <span id="payment-value-label">Valor total / entrada</span>
                                 <input
                                     type="text"
                                     id="contract-payment-value"
                                     name="paymentValue"
                                     placeholder="R$ 0,00"
-                                    readonly
                                 >
                             </label>
                             <label class="field" data-contract-section="total">
