@@ -3,7 +3,7 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const Database = require("better-sqlite3");
+const mysql = require("mysql2/promise");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 
@@ -11,80 +11,112 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.SQLITE_PATH || path.join(__dirname, "data", "app.db");
 
-const resolvedDbPath = path.isAbsolute(DB_PATH)
-    ? DB_PATH
-    : path.join(__dirname, DB_PATH);
-const dbDirectory = path.dirname(resolvedDbPath);
-fs.mkdirSync(dbDirectory, { recursive: true });
+const DB_CONFIG = {
+    host: process.env.DB_HOST || "localhost",
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "vendaveiculos",
+    waitForConnections: true,
+    connectionLimit: Number(process.env.DB_CONN_LIMIT || 10),
+    charset: "utf8mb4_unicode_ci",
+};
 
-const db = new Database(resolvedDbPath);
+let pool;
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS clients (
-        id TEXT PRIMARY KEY,
-        nome TEXT NOT NULL,
-        cpf TEXT,
-        rg TEXT,
-        cnh TEXT,
-        endereco TEXT,
-        nacionalidade TEXT,
-        estadoCivil TEXT,
-        profissao TEXT,
-        contato TEXT,
-        email TEXT,
-        observacoes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+const ensureDatabaseExists = async () => {
+    const { database, ...connectionConfig } = DB_CONFIG;
+    const connection = await mysql.createConnection(connectionConfig);
+    await connection.query(
+        `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
     );
+    await connection.end();
+};
 
-    CREATE TABLE IF NOT EXISTS operations (
-        id TEXT PRIMARY KEY,
-        tipo TEXT NOT NULL,
-        data TEXT,
-        veiculo TEXT,
-        marca TEXT,
-        modelo TEXT,
-        cor TEXT,
-        anoFabricacao TEXT,
-        anoModelo TEXT,
-        placa TEXT,
-        cidade TEXT,
-        uf TEXT,
-        clientId TEXT,
-        parceiro TEXT,
-        contato TEXT,
-        chassi TEXT,
-        renavan TEXT,
-        codigoCRVe TEXT,
-        codigoCLAe TEXT,
-        combustivel TEXT,
-        quilometragem TEXT,
-        codigoATPVe TEXT,
-        valorCompra REAL,
-        valorVenda REAL,
-        custosExtras REAL,
-        observacoes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+const query = async (sql, params = []) => {
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+};
+
+const execute = (sql, params = []) => pool.execute(sql, params);
+
+const createTables = async () => {
+    await execute(`
+        CREATE TABLE IF NOT EXISTS clients (
+            id VARCHAR(64) PRIMARY KEY,
+            nome VARCHAR(255) NOT NULL,
+            cpf VARCHAR(32),
+            rg VARCHAR(32),
+            cnh VARCHAR(32),
+            endereco VARCHAR(255),
+            nacionalidade VARCHAR(100),
+            estadoCivil VARCHAR(100),
+            profissao VARCHAR(150),
+            contato VARCHAR(100),
+            email VARCHAR(150),
+            observacoes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await execute(`
+        CREATE TABLE IF NOT EXISTS operations (
+            id VARCHAR(64) PRIMARY KEY,
+            tipo VARCHAR(20) NOT NULL,
+            data DATE,
+            veiculo VARCHAR(255),
+            marca VARCHAR(255),
+            modelo VARCHAR(255),
+            cor VARCHAR(100),
+            anoFabricacao VARCHAR(10),
+            anoModelo VARCHAR(10),
+            placa VARCHAR(16),
+            cidade VARCHAR(120),
+            uf VARCHAR(4),
+            clientId VARCHAR(64),
+            parceiro VARCHAR(255),
+            contato VARCHAR(100),
+            chassi VARCHAR(120),
+            renavan VARCHAR(120),
+            codigoCRVe VARCHAR(120),
+            codigoCLAe VARCHAR(120),
+            combustivel VARCHAR(60),
+            quilometragem VARCHAR(60),
+            codigoATPVe VARCHAR(120),
+            valorCompra DECIMAL(15,2) DEFAULT 0,
+            valorVenda DECIMAL(15,2) DEFAULT 0,
+            custosExtras DECIMAL(15,2) DEFAULT 0,
+            observacoes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+};
+
+const ensureColumn = async (table, column, definition) => {
+    const rows = await query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [DB_CONFIG.database, table, column]
     );
-`);
-
-const ensureColumn = (table, column, definition) => {
-    const info = db.prepare(`PRAGMA table_info(${table})`).all();
-    if (!info.some((col) => col.name === column)) {
-        db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+    if (!rows.length) {
+        await execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
     }
 };
 
-ensureColumn("clients", "observacoes", "TEXT");
-ensureColumn("clients", "nacionalidade", "TEXT");
-ensureColumn("clients", "estadoCivil", "TEXT");
-ensureColumn("clients", "profissao", "TEXT");
-ensureColumn("operations", "combustivel", "TEXT");
-ensureColumn("operations", "quilometragem", "TEXT");
-ensureColumn("operations", "clientId", "TEXT");
+const initDatabase = async () => {
+    await ensureDatabaseExists();
+    pool = mysql.createPool(DB_CONFIG);
+    await createTables();
+    await ensureColumn("clients", "nacionalidade", "VARCHAR(100)");
+    await ensureColumn("clients", "estadoCivil", "VARCHAR(100)");
+    await ensureColumn("clients", "profissao", "VARCHAR(150)");
+    await ensureColumn("clients", "observacoes", "TEXT");
+    await ensureColumn("operations", "clientId", "VARCHAR(64)");
+    await ensureColumn("operations", "combustivel", "VARCHAR(60)");
+    await ensureColumn("operations", "quilometragem", "VARCHAR(60)");
+};
 
 app.use(cors());
 app.use(express.json());
@@ -92,11 +124,14 @@ app.use(express.json());
 const staticPath = path.join(__dirname);
 app.use(express.static(staticPath));
 
+const numericOrZero = (value) =>
+    value === null || typeof value === "undefined" ? 0 : Number(value) || 0;
+
 const mapOperationRow = (row) => ({
     ...row,
-    valorCompra: row.valorCompra ?? 0,
-    valorVenda: row.valorVenda ?? 0,
-    custosExtras: row.custosExtras ?? 0,
+    valorCompra: numericOrZero(row.valorCompra),
+    valorVenda: numericOrZero(row.valorVenda),
+    custosExtras: numericOrZero(row.custosExtras),
     combustivel: row.combustivel || "",
     quilometragem: row.quilometragem || "",
 });
@@ -314,135 +349,172 @@ const formatCnh = (value) => {
     )}-${digits.slice(9)}`;
 };
 
-app.get("/api/operations", (req, res) => {
-    const stmt = db.prepare("SELECT * FROM operations ORDER BY datetime(created_at) DESC");
-    const operations = stmt.all().map(mapOperationRow);
-    res.json(operations);
-});
+const OPERATION_COLUMNS = [
+    "id",
+    "tipo",
+    "data",
+    "veiculo",
+    "marca",
+    "modelo",
+    "cor",
+    "anoFabricacao",
+    "anoModelo",
+    "placa",
+    "cidade",
+    "uf",
+    "clientId",
+    "parceiro",
+    "contato",
+    "chassi",
+    "renavan",
+    "codigoCRVe",
+    "codigoCLAe",
+    "combustivel",
+    "quilometragem",
+    "codigoATPVe",
+    "valorCompra",
+    "valorVenda",
+    "custosExtras",
+    "observacoes",
+];
 
-app.post("/api/operations", (req, res) => {
-    const record = req.body;
-    if (!record.id) {
-        return res.status(400).json({ message: "ID é obrigatório." });
+const CLIENT_COLUMNS = [
+    "id",
+    "nome",
+    "cpf",
+    "rg",
+    "cnh",
+    "endereco",
+    "nacionalidade",
+    "estadoCivil",
+    "profissao",
+    "contato",
+    "email",
+    "observacoes",
+];
+
+const handleError = (res, error, message = "Erro interno do servidor.") => {
+    console.error(error);
+    if (!res.headersSent) {
+        res.status(500).json({ message });
     }
-    const insert = db.prepare(`
-        INSERT INTO operations (
-            id, tipo, data, veiculo, marca, modelo, cor, anoFabricacao, anoModelo,
-            placa, cidade, uf, clientId, parceiro, contato, chassi, renavan,
-            codigoCRVe, codigoCLAe, combustivel, quilometragem, codigoATPVe, valorCompra, valorVenda,
-            custosExtras, observacoes
-        ) VALUES (
-            @id, @tipo, @data, @veiculo, @marca, @modelo, @cor, @anoFabricacao, @anoModelo,
-            @placa, @cidade, @uf, @clientId, @parceiro, @contato, @chassi, @renavan,
-            @codigoCRVe, @codigoCLAe, @combustivel, @quilometragem, @codigoATPVe, @valorCompra, @valorVenda,
-            @custosExtras, @observacoes
-        )
-    `);
-    insert.run(record);
-    const row = db.prepare("SELECT * FROM operations WHERE id = ?").get(record.id);
-    res.status(201).json(mapOperationRow(row));
-});
+};
 
-app.put("/api/operations/:id", (req, res) => {
-    const { id } = req.params;
-    const record = { ...req.body, id };
-    const stmt = db.prepare(`
-        UPDATE operations SET
-            tipo=@tipo,
-            data=@data,
-            veiculo=@veiculo,
-            marca=@marca,
-            modelo=@modelo,
-            cor=@cor,
-            anoFabricacao=@anoFabricacao,
-            anoModelo=@anoModelo,
-            placa=@placa,
-            cidade=@cidade,
-            uf=@uf,
-            clientId=@clientId,
-            parceiro=@parceiro,
-            contato=@contato,
-            chassi=@chassi,
-            renavan=@renavan,
-            codigoCRVe=@codigoCRVe,
-            codigoCLAe=@codigoCLAe,
-            combustivel=@combustivel,
-            quilometragem=@quilometragem,
-            codigoATPVe=@codigoATPVe,
-            valorCompra=@valorCompra,
-            valorVenda=@valorVenda,
-            custosExtras=@custosExtras,
-            observacoes=@observacoes,
-            updated_at=CURRENT_TIMESTAMP
-        WHERE id=@id
-    `);
-    stmt.run(record);
-    const row = db.prepare("SELECT * FROM operations WHERE id = ?").get(id);
-    res.json(mapOperationRow(row));
-});
-
-app.delete("/api/operations/:id", (req, res) => {
-    const { id } = req.params;
-    db.prepare("DELETE FROM operations WHERE id = ?").run(id);
-    res.status(204).end();
-});
-
-app.get("/api/clients", (req, res) => {
-    const stmt = db.prepare("SELECT * FROM clients ORDER BY datetime(created_at) DESC");
-    res.json(stmt.all());
-});
-
-app.post("/api/clients", (req, res) => {
-    const client = req.body;
-    if (!client.id) {
-        return res.status(400).json({ message: "ID é obrigatório." });
+app.get("/api/operations", async (req, res) => {
+    try {
+        const rows = await query("SELECT * FROM operations ORDER BY created_at DESC");
+        res.json(rows.map(mapOperationRow));
+    } catch (error) {
+        handleError(res, error, "Erro ao carregar operações.");
     }
-    const insert = db.prepare(`
-        INSERT INTO clients (
-            id, nome, cpf, rg, cnh, endereco,
-            nacionalidade, estadoCivil, profissao,
-            contato, email, observacoes
-        ) VALUES (
-            @id, @nome, @cpf, @rg, @cnh, @endereco,
-            @nacionalidade, @estadoCivil, @profissao,
-            @contato, @email, @observacoes
-        )
-    `);
-    insert.run(client);
-    const row = db.prepare("SELECT * FROM clients WHERE id = ?").get(client.id);
-    res.status(201).json(row);
 });
 
-app.put("/api/clients/:id", (req, res) => {
-    const { id } = req.params;
-    const stmt = db.prepare(`
-        UPDATE clients SET
-            nome=@nome,
-            cpf=@cpf,
-            rg=@rg,
-            cnh=@cnh,
-            endereco=@endereco,
-            nacionalidade=@nacionalidade,
-            estadoCivil=@estadoCivil,
-            profissao=@profissao,
-            contato=@contato,
-            email=@email,
-            observacoes=@observacoes,
-            updated_at=CURRENT_TIMESTAMP
-        WHERE id=@id
-    `);
-    stmt.run({ ...req.body, id });
-    const row = db.prepare("SELECT * FROM clients WHERE id = ?").get(id);
-    res.json(row);
+app.post("/api/operations", async (req, res) => {
+    try {
+        const record = req.body || {};
+        if (!record.id) {
+            return res.status(400).json({ message: "ID é obrigatório." });
+        }
+        const placeholders = OPERATION_COLUMNS.map(() => "?").join(",");
+        await execute(
+            `INSERT INTO operations (${OPERATION_COLUMNS.join(",")}) VALUES (${placeholders})`,
+            OPERATION_COLUMNS.map((column) => record[column] ?? null)
+        );
+        const rows = await query("SELECT * FROM operations WHERE id = ?", [record.id]);
+        res.status(201).json(mapOperationRow(rows[0]));
+    } catch (error) {
+        handleError(res, error, "Erro ao salvar operação.");
+    }
 });
 
-app.delete("/api/clients/:id", (req, res) => {
-    const { id } = req.params;
-    db.prepare("DELETE FROM clients WHERE id = ?").run(id);
-    res.status(204).end();
+app.put("/api/operations/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const columns = OPERATION_COLUMNS.filter((column) => column !== "id");
+        const setClause = columns.map((column) => `${column} = ?`).join(", ");
+        const params = columns.map((column) => (req.body || {})[column] ?? null);
+        params.push(id);
+        await execute(
+            `UPDATE operations SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            params
+        );
+        const rows = await query("SELECT * FROM operations WHERE id = ?", [id]);
+        if (!rows.length) {
+            return res.status(404).json({ message: "Operação não encontrada." });
+        }
+        res.json(mapOperationRow(rows[0]));
+    } catch (error) {
+        handleError(res, error, "Erro ao atualizar operação.");
+    }
 });
 
-app.post("/api/contracts/generate", (req, res) => {
+app.delete("/api/operations/:id", async (req, res) => {
+    try {
+        await execute("DELETE FROM operations WHERE id = ?", [req.params.id]);
+        res.status(204).end();
+    } catch (error) {
+        handleError(res, error, "Erro ao excluir operação.");
+    }
+});
+
+app.get("/api/clients", async (req, res) => {
+    try {
+        const rows = await query("SELECT * FROM clients ORDER BY created_at DESC");
+        res.json(rows);
+    } catch (error) {
+        handleError(res, error, "Erro ao carregar clientes.");
+    }
+});
+
+app.post("/api/clients", async (req, res) => {
+    try {
+        const client = req.body || {};
+        if (!client.id) {
+            return res.status(400).json({ message: "ID é obrigatório." });
+        }
+        const placeholders = CLIENT_COLUMNS.map(() => "?").join(",");
+        await execute(
+            `INSERT INTO clients (${CLIENT_COLUMNS.join(",")}) VALUES (${placeholders})`,
+            CLIENT_COLUMNS.map((column) => client[column] ?? null)
+        );
+        const rows = await query("SELECT * FROM clients WHERE id = ?", [client.id]);
+        res.status(201).json(rows[0]);
+    } catch (error) {
+        handleError(res, error, "Erro ao cadastrar cliente.");
+    }
+});
+
+app.put("/api/clients/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const columns = CLIENT_COLUMNS.filter((column) => column !== "id");
+        const setClause = columns.map((column) => `${column} = ?`).join(", ");
+        const params = columns.map((column) => (req.body || {})[column] ?? null);
+        params.push(id);
+        await execute(
+            `UPDATE clients SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            params
+        );
+        const rows = await query("SELECT * FROM clients WHERE id = ?", [id]);
+        if (!rows.length) {
+            return res.status(404).json({ message: "Cliente não encontrado." });
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        handleError(res, error, "Erro ao atualizar cliente.");
+    }
+});
+
+app.delete("/api/clients/:id", async (req, res) => {
+    try {
+        await execute("DELETE FROM clients WHERE id = ?", [req.params.id]);
+        res.status(204).end();
+    } catch (error) {
+        handleError(res, error, "Erro ao excluir cliente.");
+    }
+});
+
+app.post("/api/contracts/generate", async (req, res) => {
     try {
         const {
             operationId,
@@ -463,17 +535,20 @@ app.post("/api/contracts/generate", (req, res) => {
                 .status(400)
                 .json({ message: "Venda e cliente são obrigatórios." });
         }
-        const operation = db
-            .prepare("SELECT * FROM operations WHERE id = ? AND tipo = 'Venda'")
-            .get(operationId);
+        const operationRows = await query(
+            "SELECT * FROM operations WHERE id = ? AND tipo = 'Venda'",
+            [operationId]
+        );
+        const operation = operationRows[0];
         if (!operation) {
             return res.status(404).json({ message: "Venda não encontrada." });
         }
-        const client = db.prepare("SELECT * FROM clients WHERE id = ?").get(clientId);
+        const clientRows = await query("SELECT * FROM clients WHERE id = ?", [clientId]);
+        const client = clientRows[0];
         if (!client) {
             return res.status(404).json({ message: "Cliente não encontrado." });
         }
-        const saleValue = Number(operation.valorVenda) || 0;
+        const saleValue = numericOrZero(operation.valorVenda);
         const paymentType =
             typeof rawPaymentType === "string" &&
             rawPaymentType.toLowerCase() === "parcelado"
@@ -636,10 +711,7 @@ app.post("/api/contracts/generate", (req, res) => {
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
         res.send(buffer);
     } catch (error) {
-        console.error(error);
-        if (!res.headersSent) {
-            res.status(500).json({ message: "Erro ao gerar contrato." });
-        }
+        handleError(res, error, "Erro ao gerar contrato.");
     }
 });
 
@@ -648,7 +720,7 @@ const sendPage = (res, page) => {
 };
 
 app.get("/", (req, res) => {
-    sendPage(res, "historico.html");
+    sendPage(res, "login.html");
 });
 
 app.get("/historico.html", (req, res) => {
@@ -672,9 +744,19 @@ app.get("/login.html", (req, res) => {
 });
 
 app.get("*", (req, res) => {
-    sendPage(res, "historico.html");
+    sendPage(res, "login.html");
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+const startServer = async () => {
+    try {
+        await initDatabase();
+        app.listen(PORT, () => {
+            console.log(`Servidor rodando em http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error("Falha ao iniciar o servidor:", error);
+        process.exit(1);
+    }
+};
+
+startServer();
